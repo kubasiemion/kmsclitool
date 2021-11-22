@@ -40,6 +40,7 @@ func generateKeyFile(cmd *cobra.Command, args []string) {
 	}
 
 	ethkey := make([]byte, 32)
+	//read the priv key if provided, otherwise generate a random one
 	if len(privhex) > 1 {
 		if privhex[:2] == "0x" {
 			privhex = privhex[2:]
