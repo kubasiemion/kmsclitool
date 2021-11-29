@@ -15,7 +15,7 @@ import (
 
 // generateKeyFileCmd represents the generateKeyFile command
 var generateKeyFileCmd = &cobra.Command{
-	Use:   "generateKeyFile filename",
+	Use:   "generateKeyFile",
 	Short: "Generate a new keyfile",
 	Long:  `Generates a new keyfile. Interactively asks for password (do not forget your choice!).`,
 	Run:   generateKeyFile,
@@ -112,7 +112,7 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// generateKeyFileCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	generateKeyFileCmd.Flags().StringVarP(&kdf, "kdf", "", "scrypt", "--kdf preferredKDF")
+	generateKeyFileCmd.Flags().StringVar(&kdf, "kdf", "scrypt", "--kdf preferredKDF")
 	generateKeyFileCmd.Flags().StringVarP(&genFilename, "file", "f", "", "--file filename")
 	generateKeyFileCmd.Flags().StringVar(&privhex, "priv", "", "--priv private_key_in_hex")
 }

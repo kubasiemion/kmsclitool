@@ -11,29 +11,36 @@ import (
 )
 
 // readKeyFileCmd represents the readKeyFile command
-var readKeyFileCmd = &cobra.Command{
-	Use:   "readKeyFile filename",
-	Short: "Read an Ethereum key file",
-	Long:  `A longer description will follow soon.`,
-	Run:   readKeyFile,
+func newReadKeyFileCmd(fw *FileWrapper) *cobra.Command {
+	return &cobra.Command{
+		Use:   "readKeyFile filename [-v]",
+		Short: "Read an Ethereum key file",
+		Long:  `A longer description will follow soon.`,
+		Run:   fw.readKeyFile,
+	}
 }
 
-func readKeyFile(cmd *cobra.Command, args []string) {
+type FileWrapper struct {
+	KeyFile *common.Keyfile
+}
+
+func (fw *FileWrapper) readKeyFile(cmd *cobra.Command, args []string) {
 	if len(args) != 1 {
 		fmt.Println("missing or ambiguous filename")
 		return
 	}
-	kf, err := common.ReadAndProcessKeyfile(args[0])
+	var err error
+	fw.KeyFile, err = common.ReadAndProcessKeyfile(args[0])
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	prv, pubkeyec := btcec.PrivKeyFromBytes(btcec.S256(), kf.Plaintext)
+	prv, pubkeyec := btcec.PrivKeyFromBytes(btcec.S256(), fw.KeyFile.Plaintext)
 	pubkeyeth := append(pubkeyec.X.Bytes(), pubkeyec.Y.Bytes()...)
 	fmt.Printf("Public key: \t%s\n", hex.EncodeToString(pubkeyeth))
 	if common.Verbose {
-		fmt.Printf("Private key: \t%s\n", hex.EncodeToString(kf.Plaintext))
+		fmt.Printf("Private key: \t%s\n", hex.EncodeToString(fw.KeyFile.Plaintext))
 		fmt.Println("D:", prv.D)
 		fmt.Println("X:", pubkeyec.X)
 		fmt.Println("Y:", pubkeyec.Y)
@@ -41,12 +48,13 @@ func readKeyFile(cmd *cobra.Command, args []string) {
 	kecc := common.Keccak256(pubkeyeth)
 	addr := kecc[12:]
 	fmt.Printf("Ethereum addr: %s\n", hex.EncodeToString(addr))
-	fmt.Printf("(in file: %s)\n", kf.Address)
+	fmt.Printf("(in file: %s)\n", fw.KeyFile.Address)
 	return
 }
 
 func init() {
-	rootCmd.AddCommand(readKeyFileCmd)
+	rcfc := newReadKeyFileCmd(new(FileWrapper))
+	rootCmd.AddCommand(rcfc)
 
-	readKeyFileCmd.Flags().BoolVarP(&common.Verbose, "verbose", "v", false, "Verbose output")
+	rcfc.Flags().BoolVarP(&common.Verbose, "verbose", "v", false, "Verbose output")
 }
