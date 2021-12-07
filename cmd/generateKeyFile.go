@@ -15,7 +15,7 @@ import (
 
 // generateKeyFileCmd represents the generateKeyFile command
 var generateKeyFileCmd = &cobra.Command{
-	Use:   "generateKeyFile",
+	Use:   "generateKeyFile [--f filename]",
 	Short: "Generate a new keyfile",
 	Long:  `Generates a new keyfile. Interactively asks for password (do not forget your choice!).`,
 	Run:   generateKeyFile,
