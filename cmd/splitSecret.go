@@ -29,6 +29,11 @@ func split(secret []byte, n, t int) ([]poly.Share, error) {
 	return p.SplitSecret(n)
 }
 
+func recoverSecret(sh []poly.Share) ([]byte, error) {
+	i, e := poly.Lagrange(sh)
+	return i.Bytes(), e
+}
+
 var secret, filenamePat string
 var nshares, threshold int
 
