@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func EncryptAES128(kf *Keyfile, plaintext []byte, password []byte) error {
+func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
 	key, err := KeyFromPassScrypt(password, kf.Crypto.KdfScryptParams)
 	if err != nil {
 		return err
@@ -21,7 +21,17 @@ func EncryptAES128(kf *Keyfile, plaintext []byte, password []byte) error {
 	iv := make([]byte, 16)
 	rand.Read(iv)
 
-	block, err := aes.NewCipher(key[0:16])
+	var aeskeylen int
+	switch strings.ToLower(kf.Crypto.Cipher) {
+	case "aes-128-ctr":
+		aeskeylen = 16
+	case "aes-256-ctr":
+		aeskeylen = 32
+	default:
+		return fmt.Errorf("Unsupported encryption: %s", kf.Crypto.Cipher)
+	}
+
+	block, err := aes.NewCipher(key[0:aeskeylen])
 	if err != nil {
 		return err
 	}
@@ -31,7 +41,6 @@ func EncryptAES128(kf *Keyfile, plaintext []byte, password []byte) error {
 
 	kf.Crypto.Cipherparams.Iv = hex.EncodeToString(iv)
 	kf.Crypto.Ciphertext = hex.EncodeToString(ciphertext)
-	kf.Crypto.Cipher = "aes-128-ctr"
 
 	mac := Keccak256(append(key[16:], ciphertext...))
 	kf.Crypto.Mac = hex.EncodeToString(mac)
@@ -48,7 +57,9 @@ func EncryptAES128(kf *Keyfile, plaintext []byte, password []byte) error {
 func Decrypt(kf *Keyfile, key []byte) (plaintext []byte, err error) {
 	switch strings.ToLower(kf.Crypto.Cipher) {
 	case "aes-128-ctr":
-		plaintext, err = DecryptAES128CTR(kf, key)
+		plaintext, err = DecryptAES(kf, key[:16])
+	case "aes-256-ctr":
+		plaintext, err = DecryptAES(kf, key)
 	default:
 		err = fmt.Errorf("Not implemented cipher: %s\n", kf.Crypto.Cipher)
 		return
@@ -56,7 +67,8 @@ func Decrypt(kf *Keyfile, key []byte) (plaintext []byte, err error) {
 	return
 }
 
-func DecryptAES128CTR(kf *Keyfile, key []byte) (privkey []byte, err error) {
+func DecryptAES(kf *Keyfile, key []byte) (privkey []byte, err error) {
+
 	block, err := aes.NewCipher(key[0:16])
 	if err != nil {
 		return

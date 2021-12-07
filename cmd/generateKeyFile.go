@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -23,35 +24,28 @@ var generateKeyFileCmd = &cobra.Command{
 
 var genFilename string
 var kdf string
+var encalg string
 
-func generateKeyFile(cmd *cobra.Command, args []string) {
-	if len(genFilename) == 0 {
-		genFilename = time.Now().Format(time.RFC3339) + ".json"
-	}
-
-	kf := common.Keyfile{}
+func generateKeyFileStruct(pass []byte) (kf *common.Keyfile, err error) {
+	kf = &common.Keyfile{}
 
 	kf.Crypto.Kdf = kdf
-
-	pass, err := common.SetPassword()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	kf.Crypto.Cipher = strings.ToLower(encalg)
 
 	ethkey := make([]byte, 32)
 	if len(privhex) > 1 {
 		if privhex[:2] == "0x" {
 			privhex = privhex[2:]
 		}
-		privb, err := hex.DecodeString(privhex)
+		var privb []byte
+		privb, err = hex.DecodeString(privhex)
 		if err != nil {
-			fmt.Println("Bad key:", err)
+			return
 		}
 		if len(privb) > 32 {
 			privb = privb[:32]
 		}
-		copy(ethkey[32-len(privb):], privb)
+		copy(ethkey[32-len(privb):], privb) //padding
 	} else {
 		//Generate the Koblitz private key
 		rand.Read(ethkey)
@@ -74,13 +68,12 @@ func generateKeyFile(cmd *cobra.Command, args []string) {
 		kf.Crypto.KdfScryptParams.R = 8
 		kf.Crypto.KdfScryptParams.Salt = hex.EncodeToString(salt)
 	default:
-		fmt.Println("Unsupported KDF scheme")
+		err = fmt.Errorf("Unsupported KDF scheme")
 		return
 	}
 
-	err = common.EncryptAES128(&kf, ethkey, pass)
+	err = common.EncryptAES(kf, ethkey, pass)
 	if err != nil {
-		fmt.Println(err)
 		return
 	}
 
@@ -92,7 +85,26 @@ func generateKeyFile(cmd *cobra.Command, args []string) {
 
 	kf.Address = hex.EncodeToString(addr)
 
-	bytes, err := json.Marshal(&kf)
+	return
+}
+
+func generateKeyFile(cmd *cobra.Command, args []string) {
+	if len(genFilename) == 0 {
+		genFilename = time.Now().Format(time.RFC3339) + ".json"
+	}
+
+	pass, err := common.SetPassword()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	kf, err := generateKeyFileStruct(pass)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	bytes, err := json.Marshal(kf)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -112,6 +124,7 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// generateKeyFileCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	generateKeyFileCmd.Flags().StringVar(&encalg, "encalg", "aes-128-ctr", "--encalg symm-encryption-algo")
 	generateKeyFileCmd.Flags().StringVar(&kdf, "kdf", "scrypt", "--kdf preferredKDF")
 	generateKeyFileCmd.Flags().StringVarP(&genFilename, "file", "f", "", "--file filename")
 	generateKeyFileCmd.Flags().StringVar(&privhex, "priv", "", "--priv private_key_in_hex")
