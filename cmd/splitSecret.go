@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"math/big"
 
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/proveniencenft/primesecrets/poly"
 	"github.com/spf13/cobra"
 )
@@ -16,12 +18,15 @@ var splitSecretCmd = &cobra.Command{
 }
 
 func splitSecret(cmd *cobra.Command, args []string) {
-
+	fmt.Println(split([]byte(secret), nshares, threshold))
 }
 
-func split(secret []byte, n, t int) {
-	field := poly.SetField(nil)
-	fmt.Print(field)
+func split(secret []byte, n, t int) ([]poly.Share, error) {
+	f := &poly.Field{btcec.S256().P}
+	s := new(big.Int)
+	s.SetBytes(secret) // truncate!
+	p, _ := f.NewPoly(t, s)
+	return p.SplitSecret(n)
 }
 
 var secret, filenamePat string
