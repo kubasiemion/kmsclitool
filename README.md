@@ -18,4 +18,4 @@ Available Commands:
 
 Flags:
   -h, --help   help for kmsclitool
-  ´´´
+  ```
