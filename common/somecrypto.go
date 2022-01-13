@@ -87,3 +87,41 @@ func DecryptAES(kf *Keyfile, key []byte) (privkey []byte, err error) {
 	return
 
 }
+
+func CRCAddressString(addr []byte) (adstr string) {
+	adstr = "0x"
+	l := len(addr)
+	if l == 0 {
+		return "0x"
+	}
+
+	var adr20 []byte
+	if l > 20 {
+		adr20 = addr[:20]
+	} else {
+		adr20 = make([]byte, 20)
+		copy(adr20[20-l:], addr)
+
+	}
+
+	lowstrbytes := []byte(hex.EncodeToString(adr20))
+	hashstring := addrKecc(adr20)
+
+	for i := 0; i < 40; i++ {
+		if lowstrbytes[i] < 58 { // a digit
+			continue
+		}
+
+		if hashstring[i] > 0x37 {
+			lowstrbytes[i] -= 32
+		}
+	}
+	adstr += string(lowstrbytes)
+
+	return
+}
+
+func addrKecc(addr []byte) string {
+	b := Keccak256([]byte(hex.EncodeToString(addr)))
+	return hex.EncodeToString(b)
+}

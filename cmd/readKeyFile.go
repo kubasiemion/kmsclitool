@@ -47,7 +47,7 @@ func (fw *FileWrapper) readKeyFile(cmd *cobra.Command, args []string) {
 	}
 	kecc := common.Keccak256(pubkeyeth)
 	addr := kecc[12:]
-	fmt.Printf("Ethereum addr: %s\n", hex.EncodeToString(addr))
+	fmt.Printf("Ethereum addr: %s\n", common.CRCAddressString(addr))
 	fmt.Printf("(in file: %s)\n", fw.KeyFile.Address)
 	return
 }

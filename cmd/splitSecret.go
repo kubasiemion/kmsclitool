@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/google/uuid"
 	"github.com/proveniencenft/primesecrets/poly"
 	"github.com/spf13/cobra"
 )
@@ -18,7 +19,36 @@ var splitSecretCmd = &cobra.Command{
 }
 
 func splitSecret(cmd *cobra.Command, args []string) {
-	fmt.Println(split([]byte(secret), nshares, threshold))
+	if len(secret) == 0 {
+		fmt.Println("No secret to split")
+		return
+	}
+
+	if len(secret) > 32 {
+		fmt.Printf("Too much of a secret (%v bytes), truncating...\n", len(secret))
+	}
+
+	_, err := split([]byte(secret), nshares, threshold)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	uuidbase, err := uuid.NewUUID()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	ubytes, err := uuidbase.MarshalBinary()
+	fmt.Println(err, ubytes)
+	uids := make([]uuid.UUID, 4)
+
+	for i := 0; i < 4; i++ {
+		uuidbase[0] = byte(i)
+		uids[i], _ = uuid.FromBytes(uuidbase[:])
+	}
+	fmt.Println(uids)
+
 }
 
 func split(secret []byte, n, t int) ([]poly.Share, error) {
@@ -31,7 +61,11 @@ func split(secret []byte, n, t int) ([]poly.Share, error) {
 
 func recoverSecret(sh []poly.Share) ([]byte, error) {
 	i, e := poly.Lagrange(sh)
-	return i.Bytes(), e
+	if i != nil {
+		return i.Bytes(), e
+	}
+	return nil, e
+
 }
 
 var secret, filenamePat string

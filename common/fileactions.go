@@ -19,13 +19,13 @@ func SetPassword() ([]byte, error) {
 			return nil, err
 		}
 		if len(pass) < 6 {
-			fmt.Println("Password too short, try again\n")
+			fmt.Print("Password too short, try again\n\n")
 			continue
 		}
 		if bytes.Equal(pass, p2) {
 			return pass, nil
 		}
-		fmt.Println("Passwords do not match, try again\n")
+		fmt.Print("Passwords do not match, try again\n\n")
 	}
 }
 

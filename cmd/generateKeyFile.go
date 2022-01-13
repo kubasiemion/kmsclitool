@@ -83,7 +83,7 @@ func generateKeyFileStruct(pass []byte) (kf *common.Keyfile, err error) {
 	kecc := common.Keccak256(pubkeyeth)
 	addr := kecc[12:]
 
-	kf.Address = hex.EncodeToString(addr)
+	kf.Address = common.CRCAddressString(addr)
 
 	return
 }
