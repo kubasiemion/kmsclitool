@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/decred/dcrd/dcrec/secp256k1"
 	"github.com/google/uuid"
 	"github.com/proveniencenft/primesecrets/poly"
 	"github.com/spf13/cobra"
@@ -52,7 +52,7 @@ func splitSecret(cmd *cobra.Command, args []string) {
 }
 
 func split(secret []byte, n, t int) ([]poly.Share, error) {
-	f := &poly.Field{btcec.S256().P}
+	f := &poly.Field{secp256k1.S256().P}
 	s := new(big.Int)
 	s.SetBytes(secret) // truncate!
 	p, _ := f.NewPoly(t, s)

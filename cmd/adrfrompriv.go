@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/decred/dcrd/dcrec/secp256k1"
 	"github.com/proveniencenft/kmsclitool/common"
 	"github.com/spf13/cobra"
 )
@@ -38,12 +38,12 @@ func adrFromPriv(cmd *cobra.Command, args []string) {
 		fmt.Println("Error decoding the private key:", err)
 		return
 	}
-	_, pub := btcec.PrivKeyFromBytes(btcec.S256(), priv)
+	_, pub := secp256k1.PrivKeyFromBytes(priv)
 	kecc := common.Keccak256(append(pub.X.Bytes(), pub.Y.Bytes()...))
 	addr := kecc[12:]
 	fmt.Println(hex.EncodeToString(addr))
 
-	x, y := btcec.S256().ScalarBaseMult(priv)
+	x, y := secp256k1.S256().ScalarBaseMult(priv)
 	fmt.Println("x:", hex.EncodeToString(x.Bytes()))
 	fmt.Println("y:", hex.EncodeToString(y.Bytes()))
 	kecc = common.Keccak256(append(Padd(x), Padd(y)...))

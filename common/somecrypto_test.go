@@ -7,7 +7,7 @@ import (
 )
 
 func TestCRC(t *testing.T) {
-	adrstr := "0x2d955c0C6DE2887708b13AB15a95C4Fd7B0B7D25"
+	adrstr := "0xd41c057fd1c78805AAC12B0A94a405c0461A6FBb"
 
 	adrbytes, e := hex.DecodeString(adrstr[2:])
 	if e != nil {

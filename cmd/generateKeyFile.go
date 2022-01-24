@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/decred/dcrd/dcrec/secp256k1"
 	"github.com/proveniencenft/kmsclitool/common"
 	"github.com/spf13/cobra"
 )
@@ -77,7 +77,7 @@ func generateKeyFileStruct(pass []byte) (kf *common.Keyfile, err error) {
 		return
 	}
 
-	x, y := btcec.S256().ScalarBaseMult(ethkey)
+	x, y := secp256k1.S256().ScalarBaseMult(ethkey)
 	pubkeyeth := append(x.Bytes(), y.Bytes()...)
 	fmt.Printf("Public key: %s\n", hex.EncodeToString(pubkeyeth))
 	kecc := common.Keccak256(pubkeyeth)

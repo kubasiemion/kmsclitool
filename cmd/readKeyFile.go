@@ -5,7 +5,7 @@ import (
 
 	"encoding/hex"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/decred/dcrd/dcrec/secp256k1/v2"
 	"github.com/proveniencenft/kmsclitool/common"
 	"github.com/spf13/cobra"
 )
@@ -36,7 +36,7 @@ func (fw *FileWrapper) readKeyFile(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	prv, pubkeyec := btcec.PrivKeyFromBytes(btcec.S256(), fw.KeyFile.Plaintext)
+	prv, pubkeyec := secp256k1.PrivKeyFromBytes(fw.KeyFile.Plaintext)
 	pubkeyeth := append(pubkeyec.X.Bytes(), pubkeyec.Y.Bytes()...)
 	fmt.Printf("Public key: \t%s\n", hex.EncodeToString(pubkeyeth))
 	if common.Verbose {
