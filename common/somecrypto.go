@@ -8,11 +8,32 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-
-	"github.com/google/uuid"
 )
 
 func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
+	//Handle KDF
+
+	salt := make([]byte, 16)
+	rand.Read(salt)
+	/*
+		kf.Crypto.KdfparamsPack.Dklen=32
+		kf.Crypto.KdfparamsPack.N=131072
+		kf.Crypto.KdfparamsPack.P=1
+		kf.Crypto.KdfparamsPack.R=8
+		kf.Crypto.KdfparamsPack.Salt=hex.EncodeToString(salt)
+	*/
+	switch kf.Crypto.Kdf {
+	case "scrypt":
+		kf.Crypto.KdfScryptParams.Dklen = 32
+		kf.Crypto.KdfScryptParams.N = 131072
+		kf.Crypto.KdfScryptParams.P = 1
+		kf.Crypto.KdfScryptParams.R = 8
+		kf.Crypto.KdfScryptParams.Salt = hex.EncodeToString(salt)
+	default:
+		return fmt.Errorf("Unsupported KDF scheme")
+
+	}
+
 	key, err := KeyFromPassScrypt(password, kf.Crypto.KdfScryptParams)
 	if err != nil {
 		return err
@@ -48,10 +69,20 @@ func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
 	//_, pubkeyec := btcec.PrivKeyFromBytes(btcec.S256(), ethkey)
 	//pubkeyeth := append(pubkeyec.X.Bytes(), pubkeyec.Y.Bytes()...)
 
-	xuuid, err := uuid.NewUUID()
-	kf.ID = xuuid.String()
 	parambytes, err := json.Marshal(&kf.Crypto.KdfScryptParams)
 	return kf.Crypto.KdfparamsPack.UnmarshalJSON(parambytes)
+}
+
+func DecryptKeyFile(kf *Keyfile, pass string) error {
+	key, e := KeyFromPassScrypt([]byte("kaczuszka"), kf.Crypto.KdfScryptParams)
+	if e != nil {
+		return e
+	}
+	kf.Plaintext, e = Decrypt(kf, key)
+	if e != nil {
+		return e
+	}
+	return nil
 }
 
 func Decrypt(kf *Keyfile, key []byte) (plaintext []byte, err error) {

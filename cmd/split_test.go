@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
+
+	"github.com/decred/dcrd/dcrec/secp256k1/v2"
+	"github.com/proveniencenft/primesecrets/poly"
 )
 
 func TestSplit(t *testing.T) {
 	secret := []byte("Jasio Karuzela")
-	sh, err := split(secret, 3, 2)
+	sh, err := poly.SplitBytes(secret, 3, 2, *secp256k1.S256().P)
 	if err != nil {
 		t.Error(err)
 	}
@@ -30,7 +33,7 @@ func TestSplit(t *testing.T) {
 		t.Error("secret not recovered from [1:]")
 	}
 
-	sh2, err := split(secret, 4, 3)
+	sh2, err := poly.SplitBytes(secret, 4, 3, *secp256k1.S256().P)
 	if err != nil {
 		t.Error(err)
 	}
@@ -40,5 +43,8 @@ func TestSplit(t *testing.T) {
 	if err == nil {
 		t.Error("mismatching shares not detected")
 	}
+
+	secretString := "Duda Jasio"
+	SplitString(secretString)
 
 }

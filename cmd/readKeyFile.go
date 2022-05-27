@@ -36,6 +36,13 @@ func (fw *FileWrapper) readKeyFile(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	if fw.KeyFile.Address == splitAddress {
+		id := "xx" + fw.KeyFile.ID[2:]
+
+		fmt.Printf("%s from suite %s\n", splitAddress, id)
+		return
+	}
+
 	prv, pubkeyec := secp256k1.PrivKeyFromBytes(fw.KeyFile.Plaintext)
 	pubkeyeth := append(pubkeyec.X.Bytes(), pubkeyec.Y.Bytes()...)
 	fmt.Printf("Public key: \t%s\n", hex.EncodeToString(pubkeyeth))

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/dcrec/secp256k1"
+	"github.com/google/uuid"
 	"github.com/proveniencenft/kmsclitool/common"
 	"github.com/spf13/cobra"
 )
@@ -31,6 +32,8 @@ func generateKeyFileStruct(pass []byte) (kf *common.Keyfile, err error) {
 
 	kf.Crypto.Kdf = kdf
 	kf.Crypto.Cipher = strings.ToLower(encalg)
+	xuuid, err := uuid.NewUUID()
+	kf.ID = xuuid.String()
 
 	ethkey := make([]byte, 32)
 	if len(privhex) > 1 {
@@ -49,27 +52,6 @@ func generateKeyFileStruct(pass []byte) (kf *common.Keyfile, err error) {
 	} else {
 		//Generate the Koblitz private key
 		rand.Read(ethkey)
-	}
-
-	salt := make([]byte, 16)
-	rand.Read(salt)
-	/*
-		kf.Crypto.KdfparamsPack.Dklen=32
-		kf.Crypto.KdfparamsPack.N=131072
-		kf.Crypto.KdfparamsPack.P=1
-		kf.Crypto.KdfparamsPack.R=8
-		kf.Crypto.KdfparamsPack.Salt=hex.EncodeToString(salt)
-	*/
-	switch kdf {
-	case "scrypt":
-		kf.Crypto.KdfScryptParams.Dklen = 32
-		kf.Crypto.KdfScryptParams.N = 131072
-		kf.Crypto.KdfScryptParams.P = 1
-		kf.Crypto.KdfScryptParams.R = 8
-		kf.Crypto.KdfScryptParams.Salt = hex.EncodeToString(salt)
-	default:
-		err = fmt.Errorf("Unsupported KDF scheme")
-		return
 	}
 
 	err = common.EncryptAES(kf, ethkey, pass)
