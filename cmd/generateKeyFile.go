@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/decred/dcrd/dcrec/secp256k1"
 	"github.com/google/uuid"
 	"github.com/proveniencenft/kmsclitool/common"
 	"github.com/spf13/cobra"
@@ -59,12 +58,8 @@ func generateKeyFileStruct(pass []byte) (kf *common.Keyfile, err error) {
 		return
 	}
 
-	x, y := secp256k1.S256().ScalarBaseMult(ethkey)
-	pubkeyeth := append(x.Bytes(), y.Bytes()...)
+	pubkeyeth, addr := common.Scalar2Pub(ethkey)
 	fmt.Printf("Public key: %s\n", hex.EncodeToString(pubkeyeth))
-	kecc := common.Keccak256(pubkeyeth)
-	addr := kecc[12:]
-
 	kf.Address = common.CRCAddressString(addr)
 
 	return

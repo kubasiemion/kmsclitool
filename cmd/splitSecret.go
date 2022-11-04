@@ -15,6 +15,7 @@ import (
 )
 
 const splitAddress = "File contains a shard of a key"
+const splitString = "File contains a shard of a secret string"
 
 // splitSecretCmd
 var splitSecretCmd = &cobra.Command{
@@ -30,9 +31,10 @@ func splitSecret(cmd *cobra.Command, args []string) {
 		fmt.Println("No key to split")
 		return
 	}
+	fmt.Println("key:", isSecretAKey)
 	if isSecretAKey {
 		if secret[:2] == "0x" {
-			secret = privhex[2:]
+			secret = secret[2:]
 		}
 		if len(secret) > 64 {
 			fmt.Printf("Key too long: (%v bytes)", len(secret))
@@ -75,19 +77,19 @@ func splitKey(key []byte) {
 			fmt.Println("Error serializing to json:", err)
 			return
 		}
-		writeShareToFile(filename, uid, shenc)
+		writeShareToFile(filename, uid, shenc, splitAddress)
 	}
 
 }
 
-func writeShareToFile(filename string, uid uuid.UUID, plaintext []byte) error {
+func writeShareToFile(filename string, uid uuid.UUID, plaintext []byte, addressText string) error {
 	keyf := &common.Keyfile{}
 	keyf.Plaintext = plaintext
 	keyf.ID = uid.String()
 	keyf.Crypto.Cipher = encalg
 	keyf.Crypto.Kdf = kdf
 	pass, err := common.ReadPassword(fmt.Sprintf("Password for %s:", filename))
-	keyf.Address = splitAddress
+	keyf.Address = addressText
 	if err != nil {
 		return err
 	}
@@ -132,6 +134,5 @@ var isSecretAKey bool
 func SplitString(s string) ([]gf256.Share, error) {
 	sh := gf256.Share{}
 	sh.Value = []byte{}
-	fmt.Println(s)
 	return gf256.SplitBytes([]byte(s), nshares, threshold)
 }

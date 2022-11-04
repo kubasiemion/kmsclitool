@@ -251,6 +251,8 @@ github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORN
 github.com/kr/pretty v0.2.0/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
+github.com/kubasiemion/primefield v0.0.0-20211202182805-7b934de53b36 h1:HqKMT52F0pj89trjqA46/QOmgSxWwxmCeKyJnBjI58o=
+github.com/kubasiemion/primefield v0.0.0-20211202182805-7b934de53b36/go.mod h1:KmqjlOqjVT0Kna8DYZDSmXSRV2vNR/6qAAIQJG4B5rY=
 github.com/lyft/protoc-gen-star v0.5.3/go.mod h1:V0xaHgaf5oCCqmcxYcWiDfTiKsZsRc87/1qhoTACD8w=
 github.com/magiconair/properties v1.8.5/go.mod h1:y3VJvCyxH9uVvJTWEGAELF3aiYNyPKd5NZ3oSwXrF60=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
@@ -307,6 +309,8 @@ github.com/proveniencenft/primesecrets v0.0.0-20220124160851-2bf5417f2ed5 h1:7OI
 github.com/proveniencenft/primesecrets v0.0.0-20220124160851-2bf5417f2ed5/go.mod h1:ye4POLuS+Dot+qGdv0afaO0c5QryXQBZpH2e7AmZWaA=
 github.com/proveniencenft/primesecrets v0.0.0-20220125160341-68ff697861bd h1:Wy1slTzt5NGddz/cF4j4cNYvwEexPg1WaPsuijpRKGY=
 github.com/proveniencenft/primesecrets v0.0.0-20220125160341-68ff697861bd/go.mod h1:ye4POLuS+Dot+qGdv0afaO0c5QryXQBZpH2e7AmZWaA=
+github.com/proveniencenft/primesecrets v0.0.0-20220616115523-368602a1ffb7 h1:+Qsq9i5bzmX71QLuPI93xFUpOIs9A+juqDeT8J2D3ao=
+github.com/proveniencenft/primesecrets v0.0.0-20220616115523-368602a1ffb7/go.mod h1:ye4POLuS+Dot+qGdv0afaO0c5QryXQBZpH2e7AmZWaA=
 github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=

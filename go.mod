@@ -12,7 +12,8 @@ require (
 
 require (
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
-	github.com/proveniencenft/primesecrets v0.0.0-20220125160341-68ff697861bd // indirect
+	github.com/kubasiemion/primefield v0.0.0-20211202182805-7b934de53b36 // indirect
+	github.com/proveniencenft/primesecrets v0.0.0-20220616115523-368602a1ffb7 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 // indirect

@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/decred/dcrd/dcrec/secp256k1"
 )
 
 func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
@@ -155,4 +157,17 @@ func CRCAddressString(addr []byte) (adstr string) {
 func addrKecc(addr []byte) string {
 	b := Keccak256([]byte(hex.EncodeToString(addr)))
 	return hex.EncodeToString(b)
+}
+
+func Scalar2Pub(ethkey []byte) (pubkeyeth, addr []byte) {
+	x, y := secp256k1.S256().ScalarBaseMult(ethkey)
+	pubkeyeth = append(x.Bytes(), y.Bytes()...)
+	//fmt.Printf("Public key: %s\n", hex.EncodeToString(pubkeyeth))
+	addr = AddressFromPub(pubkeyeth)
+	return
+}
+
+func AddressFromPub(pubkeyeth []byte) []byte {
+	kecc := Keccak256(pubkeyeth)
+	return kecc[12:]
 }
