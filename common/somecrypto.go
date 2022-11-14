@@ -7,7 +7,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/decred/dcrd/dcrec/secp256k1"
 )
@@ -159,15 +161,63 @@ func addrKecc(addr []byte) string {
 	return hex.EncodeToString(b)
 }
 
-func Scalar2Pub(ethkey []byte) (pubkeyeth, addr []byte) {
+func Scalar2Pub(ethkey []byte) (pubkeyeth []byte) {
 	x, y := secp256k1.S256().ScalarBaseMult(ethkey)
 	pubkeyeth = append(x.Bytes(), y.Bytes()...)
 	//fmt.Printf("Public key: %s\n", hex.EncodeToString(pubkeyeth))
-	addr = AddressFromPub(pubkeyeth)
 	return
+}
+
+func CRCAddressFromPub(pubkeyeth []byte) string {
+	return CRCAddressString(AddressFromPub(pubkeyeth))
 }
 
 func AddressFromPub(pubkeyeth []byte) []byte {
 	kecc := Keccak256(pubkeyeth)
 	return kecc[12:]
+}
+
+type vanityResult struct {
+	key []byte
+	err error
+}
+
+func GenerateVanityKey(vanity string, caseSensitive bool) vanityResult {
+	key := make([]byte, 32)
+	rand.Read(key)
+	if len(vanity) > 0 {
+		var af func(k []byte) (a string)
+		if !caseSensitive {
+			vanity = strings.ToLower(vanity)
+			af = func(k []byte) string {
+				a := hex.EncodeToString(AddressFromPub(Scalar2Pub(k)))
+				return a
+			}
+		} else {
+			af = func(k []byte) string { a := CRCAddressFromPub(Scalar2Pub(key)); return a[2:] }
+		}
+		rx := regexp.MustCompile(vanity)
+
+		for len(rx.FindString(af(key))) == 0 {
+			rand.Read(key)
+
+			//fmt.Println(a)
+		}
+	}
+
+	return vanityResult{key, nil}
+}
+
+func TimeConstraindedVanityKey(vanity string, caseSensitive bool, timeout int) ([]byte, error) {
+	result := make(chan vanityResult, 1)
+	go func() {
+		result <- GenerateVanityKey(vanity, caseSensitive)
+	}()
+	select {
+	case <-time.After(time.Duration(timeout) * time.Second):
+		return nil, fmt.Errorf("Timeout after %v seconds", timeout)
+	case result := <-result:
+		return result.key, nil
+	}
+
 }

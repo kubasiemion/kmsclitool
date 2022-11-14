@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -50,7 +49,10 @@ func generateKeyFileStruct(pass []byte) (kf *common.Keyfile, err error) {
 		copy(ethkey[32-len(privb):], privb) //padding
 	} else {
 		//Generate the Koblitz private key
-		rand.Read(ethkey)
+		ethkey, err = common.TimeConstraindedVanityKey(vanity, caseSensitive, timeout)
+		if err != nil {
+			return
+		}
 	}
 
 	err = common.EncryptAES(kf, ethkey, pass)
@@ -58,9 +60,10 @@ func generateKeyFileStruct(pass []byte) (kf *common.Keyfile, err error) {
 		return
 	}
 
-	pubkeyeth, addr := common.Scalar2Pub(ethkey)
-	fmt.Printf("Public key: %s\n", hex.EncodeToString(pubkeyeth))
-	kf.Address = common.CRCAddressString(addr)
+	pubkeyeth := common.Scalar2Pub(ethkey)
+	addr := common.CRCAddressFromPub(pubkeyeth)
+	kf.PubKey = hex.EncodeToString(pubkeyeth)
+	kf.Address = addr
 
 	return
 }
@@ -86,6 +89,8 @@ func generateKeyFile(cmd *cobra.Command, args []string) {
 		fmt.Println(err)
 		return
 	}
+	fmt.Printf("Public key: %s\n", kf.PubKey)
+	fmt.Printf("Address: %s\n", kf.Address)
 	ioutil.WriteFile(genFilename, bytes, 0644)
 }
 
@@ -105,4 +110,11 @@ func init() {
 	generateKeyFileCmd.Flags().StringVar(&kdf, "kdf", "scrypt", "--kdf preferredKDF")
 	generateKeyFileCmd.Flags().StringVarP(&genFilename, "file", "f", "", "--file filename")
 	generateKeyFileCmd.Flags().StringVar(&privhex, "priv", "", "--priv private_key_in_hex")
+	generateKeyFileCmd.Flags().StringVar(&vanity, "vanity", "", "--vanity vanity_address_regexp")
+	generateKeyFileCmd.Flags().BoolVar(&caseSensitive, "vanityCaseSensitive", false, "--vanityCaseSensitive=bool")
+	generateKeyFileCmd.Flags().IntVarP(&timeout, "timeout", "t", 180, "--timeout generation-time-limit-in-seconds")
 }
+
+var vanity = ""
+var caseSensitive bool
+var timeout = 180

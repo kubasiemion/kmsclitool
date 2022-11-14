@@ -14,16 +14,19 @@ func TestAddress(t *testing.T) {
 	for i := 0; ; i++ {
 		rand.Read(ethkey)
 
-		_, addr := Scalar2Pub(ethkey)
-		haddr := hex.EncodeToString(addr)
+		addr := hex.EncodeToString((Scalar2Pub(ethkey)))
 
-		if len(seed.Find([]byte(haddr))) > 0 {
+		if len(seed.Find([]byte(addr))) > 0 {
 			fmt.Println(hex.EncodeToString(ethkey))
-			fmt.Println(i, haddr)
+			fmt.Println(i, addr)
 			break
 		}
 	}
 
 }
 
-var seed = regexp.MustCompile("^5eed5")
+func TestMatch(t *testing.T) {
+	fmt.Println(seed.FindAllString("D1e6aaad1e6bbbD1E6cccd1E6", -1))
+}
+
+var seed = regexp.MustCompile("(?i)^d1e6")

@@ -27,6 +27,7 @@ type Keyfile struct {
 		Mac             string          `json:"mac"`
 	} `json:"crypto"`
 	Plaintext []byte `json:"-"`
+	PubKey    string `json:"-"`
 }
 
 type KdfScryptparams struct {
