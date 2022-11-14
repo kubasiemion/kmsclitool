@@ -25,7 +25,7 @@ var genFilename string
 var kdf string
 var encalg string
 
-func generateKeyFileStruct(pass []byte) (kf *common.Keyfile, err error) {
+func generateKeyFileStruct(pass []byte, vanity string, caseSensitive bool, timeout int) (kf *common.Keyfile, err error) {
 	kf = &common.Keyfile{}
 
 	kf.Crypto.Kdf = kdf
@@ -79,7 +79,7 @@ func generateKeyFile(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	kf, err := generateKeyFileStruct(pass)
+	kf, err := generateKeyFileStruct(pass, vanity, caseSensitive, timeout)
 	if err != nil {
 		fmt.Println(err)
 		return
