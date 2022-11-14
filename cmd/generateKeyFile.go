@@ -1,14 +1,11 @@
 package cmd
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/proveniencenft/kmsclitool/common"
 	"github.com/spf13/cobra"
 )
@@ -25,49 +22,6 @@ var genFilename string
 var kdf string
 var encalg string
 
-func generateKeyFileStruct(pass []byte, vanity string, caseSensitive bool, timeout int) (kf *common.Keyfile, err error) {
-	kf = &common.Keyfile{}
-
-	kf.Crypto.Kdf = kdf
-	kf.Crypto.Cipher = strings.ToLower(encalg)
-	xuuid, err := uuid.NewUUID()
-	kf.ID = xuuid.String()
-
-	ethkey := make([]byte, 32)
-	if len(privhex) > 1 {
-		if privhex[:2] == "0x" {
-			privhex = privhex[2:]
-		}
-		var privb []byte
-		privb, err = hex.DecodeString(privhex)
-		if err != nil {
-			return
-		}
-		if len(privb) > 32 {
-			privb = privb[:32]
-		}
-		copy(ethkey[32-len(privb):], privb) //padding
-	} else {
-		//Generate the Koblitz private key
-		ethkey, err = common.TimeConstraindedVanityKey(vanity, caseSensitive, timeout)
-		if err != nil {
-			return
-		}
-	}
-
-	err = common.EncryptAES(kf, ethkey, pass)
-	if err != nil {
-		return
-	}
-
-	pubkeyeth := common.Scalar2Pub(ethkey)
-	addr := common.CRCAddressFromPub(pubkeyeth)
-	kf.PubKey = hex.EncodeToString(pubkeyeth)
-	kf.Address = addr
-
-	return
-}
-
 func generateKeyFile(cmd *cobra.Command, args []string) {
 	if len(genFilename) == 0 {
 		genFilename = time.Now().Format(time.RFC3339) + ".json"
@@ -79,7 +33,7 @@ func generateKeyFile(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	kf, err := generateKeyFileStruct(pass, vanity, caseSensitive, timeout)
+	kf, err := common.GenerateKeyFileStruct(pass, kdf, encalg, privhex, vanity, caseSensitive, timeout)
 	if err != nil {
 		fmt.Println(err)
 		return

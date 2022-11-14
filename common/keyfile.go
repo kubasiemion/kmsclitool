@@ -4,7 +4,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
+	"strings"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/scrypt"
 	"golang.org/x/crypto/sha3"
 )
@@ -73,4 +75,47 @@ func Keccak256(data ...[]byte) []byte {
 		d.Write(b)
 	}
 	return d.Sum(nil)
+}
+
+func GenerateKeyFileStruct(pass []byte, kdf string, encalg string, privhex string, vanity string, caseSensitive bool, timeout int) (kf *Keyfile, err error) {
+	kf = &Keyfile{}
+
+	kf.Crypto.Kdf = kdf
+	kf.Crypto.Cipher = strings.ToLower(encalg)
+	xuuid, err := uuid.NewUUID()
+	kf.ID = xuuid.String()
+
+	ethkey := make([]byte, 32)
+	if len(privhex) > 1 {
+		if privhex[:2] == "0x" {
+			privhex = privhex[2:]
+		}
+		var privb []byte
+		privb, err = hex.DecodeString(privhex)
+		if err != nil {
+			return
+		}
+		if len(privb) > 32 {
+			privb = privb[:32]
+		}
+		copy(ethkey[32-len(privb):], privb) //padding
+	} else {
+		//Generate the Koblitz private key
+		ethkey, err = TimeConstraindedVanityKey(vanity, caseSensitive, timeout)
+		if err != nil {
+			return
+		}
+	}
+
+	err = EncryptAES(kf, ethkey, pass)
+	if err != nil {
+		return
+	}
+
+	pubkeyeth := Scalar2Pub(ethkey)
+	addr := CRCAddressFromPub(pubkeyeth)
+	kf.PubKey = hex.EncodeToString(pubkeyeth)
+	kf.Address = addr
+
+	return
 }
