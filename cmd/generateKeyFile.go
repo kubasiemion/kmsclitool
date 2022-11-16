@@ -33,11 +33,12 @@ func generateKeyFile(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	kf, err := common.GenerateKeyFileStruct(pass, kdf, encalg, privhex, vanity, caseSensitive, timeout)
+	kf, err, tries, span := common.GenerateKeyFileStruct(pass, kdf, encalg, privhex, vanity, caseSensitive, timeout)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	fmt.Println(kf)
 	bytes, err := json.Marshal(kf)
 	if err != nil {
 		fmt.Println(err)
@@ -46,6 +47,8 @@ func generateKeyFile(cmd *cobra.Command, args []string) {
 	fmt.Printf("Public key: %s\n", kf.PubKey)
 	fmt.Printf("Address: %s\n", kf.Address)
 	ioutil.WriteFile(genFilename, bytes, 0644)
+	fmt.Printf("Written to the file: '%s'\n", genFilename)
+	fmt.Printf("Generated in %v tries within %v \n", tries, span)
 }
 
 func init() {

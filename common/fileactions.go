@@ -46,29 +46,23 @@ func ReadAndProcessKeyfile(filename string) (keyfile *Keyfile, err error) {
 	var key []byte
 	switch keyfile.Crypto.Kdf {
 	case "scrypt":
-		key, err = handleScrypt(keyfile, pass)
+		key, err = KeyFromPassScrypt(pass, keyfile.Crypto.KdfScryptParams)
 		if err != nil {
 			return
 		}
 
+	case "pbkdf2":
+		key, err = KeyFromPassPbkdf2(pass, keyfile.Crypto.KdfPbkdf2params)
+		if err != nil {
+			return
+		}
 	default:
 		err = fmt.Errorf("Unsupported KDF: " + keyfile.Crypto.Kdf)
 		return
 	}
-	keyfile.Plaintext, err = Decrypt(keyfile, key)
-	return
-}
-
-func handleScrypt(kf *Keyfile, pass []byte) (key []byte, err error) {
-
-	//derive key
-	key, err = KeyFromPassScrypt(pass, kf.Crypto.KdfScryptParams)
-	if err != nil {
-		return
-	}
-
+	//Verify MAC
 	//read the ciphertext
-	citx, err := hex.DecodeString(kf.Crypto.Ciphertext)
+	citx, err := hex.DecodeString(keyfile.Crypto.Ciphertext)
 	if err != nil {
 		return
 	}
@@ -76,9 +70,10 @@ func handleScrypt(kf *Keyfile, pass []byte) (key []byte, err error) {
 	//verify mac
 	mymac := hex.EncodeToString(Keccak256(append(key[16:32], citx...)))
 
-	if mymac != kf.Crypto.Mac {
+	if mymac != keyfile.Crypto.Mac {
 		err = fmt.Errorf("MAC verification failed")
 	}
 
+	keyfile.Plaintext, err = Decrypt(keyfile, key)
 	return
 }

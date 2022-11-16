@@ -26,6 +26,9 @@ func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
 		kf.Crypto.KdfparamsPack.R=8
 		kf.Crypto.KdfparamsPack.Salt=hex.EncodeToString(salt)
 	*/
+	var key []byte
+	var err error
+	var scryptparams interface{}
 	switch kf.Crypto.Kdf {
 	case "scrypt":
 		kf.Crypto.KdfScryptParams.Dklen = 32
@@ -33,15 +36,26 @@ func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
 		kf.Crypto.KdfScryptParams.P = 1
 		kf.Crypto.KdfScryptParams.R = 8
 		kf.Crypto.KdfScryptParams.Salt = hex.EncodeToString(salt)
+		key, err = KeyFromPassScrypt(password, kf.Crypto.KdfScryptParams)
+		if err != nil {
+			return err
+		}
+		scryptparams = &kf.Crypto.KdfScryptParams
+	case "pbkdf2":
+		kf.Crypto.KdfPbkdf2params.C = 262144
+		kf.Crypto.KdfPbkdf2params.Dklen = 32
+		kf.Crypto.KdfPbkdf2params.Prf = "hmac-sha256"
+		kf.Crypto.KdfPbkdf2params.Salt = hex.EncodeToString(salt)
+		key, err = KeyFromPassPbkdf2(password, kf.Crypto.KdfPbkdf2params)
+		if err != nil {
+			return err
+		}
+		scryptparams = &kf.Crypto.KdfPbkdf2params
 	default:
 		return fmt.Errorf("Unsupported KDF scheme")
 
 	}
 
-	key, err := KeyFromPassScrypt(password, kf.Crypto.KdfScryptParams)
-	if err != nil {
-		return err
-	}
 	//Letsencrypt
 	iv := make([]byte, 16)
 	rand.Read(iv)
@@ -72,21 +86,11 @@ func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
 	kf.Version = 3
 	//_, pubkeyec := btcec.PrivKeyFromBytes(btcec.S256(), ethkey)
 	//pubkeyeth := append(pubkeyec.X.Bytes(), pubkeyec.Y.Bytes()...)
-
-	parambytes, err := json.Marshal(&kf.Crypto.KdfScryptParams)
+	parambytes, err := json.Marshal(scryptparams)
+	if err != nil {
+		return err
+	}
 	return kf.Crypto.KdfparamsPack.UnmarshalJSON(parambytes)
-}
-
-func DecryptKeyFile(kf *Keyfile, pass string) error {
-	key, e := KeyFromPassScrypt([]byte("kaczuszka"), kf.Crypto.KdfScryptParams)
-	if e != nil {
-		return e
-	}
-	kf.Plaintext, e = Decrypt(kf, key)
-	if e != nil {
-		return e
-	}
-	return nil
 }
 
 func Decrypt(kf *Keyfile, key []byte) (plaintext []byte, err error) {
@@ -178,11 +182,13 @@ func AddressFromPub(pubkeyeth []byte) []byte {
 }
 
 type vanityResult struct {
-	key []byte
-	err error
+	key   []byte
+	err   error
+	tries int
 }
 
 func GenerateVanityKey(vanity string, caseSensitive bool) vanityResult {
+	i := 1
 	key := make([]byte, 32)
 	rand.Read(key)
 	if len(vanity) > 0 {
@@ -199,25 +205,27 @@ func GenerateVanityKey(vanity string, caseSensitive bool) vanityResult {
 		rx := regexp.MustCompile(vanity)
 
 		for len(rx.FindString(af(key))) == 0 {
+			i++
 			rand.Read(key)
 
 			//fmt.Println(a)
 		}
 	}
 
-	return vanityResult{key, nil}
+	return vanityResult{key, nil, i}
 }
 
-func TimeConstraindedVanityKey(vanity string, caseSensitive bool, timeout int) ([]byte, error) {
+func TimeConstraindedVanityKey(vanity string, caseSensitive bool, timeout int) ([]byte, error, int, time.Duration) {
+	start := time.Now()
 	result := make(chan vanityResult, 1)
 	go func() {
 		result <- GenerateVanityKey(vanity, caseSensitive)
 	}()
 	select {
 	case <-time.After(time.Duration(timeout) * time.Second):
-		return nil, fmt.Errorf("Timeout after %v seconds", timeout)
+		return nil, fmt.Errorf("Timeout after %v seconds", timeout), 0, time.Since(start)
 	case result := <-result:
-		return result.key, nil
+		return result.key, nil, result.tries, time.Since(start)
 	}
 
 }
