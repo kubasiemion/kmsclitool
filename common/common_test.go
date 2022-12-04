@@ -13,5 +13,8 @@ func TestRead(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	kf.VerifyMAC(key)
+	if kf.VerifyMAC(key) != nil {
+		t.Error("MAC verification error")
+	}
+
 }

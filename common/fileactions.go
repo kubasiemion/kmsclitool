@@ -2,7 +2,7 @@ package common
 
 import (
 	"bytes"
-	"encoding/hex"
+	"encoding/json"
 	"fmt"
 )
 
@@ -29,6 +29,23 @@ func SetPassword() ([]byte, error) {
 	}
 }
 
+func ProcessJsonBytes(jsonbytes []byte) (keyfile *Keyfile, err error) {
+	kf := Keyfile{}
+	err = json.Unmarshal(jsonbytes, &kf)
+	switch kf.Crypto.Kdf {
+	case "scrypt":
+		ksp := new(KdfScryptparams)
+		err = json.Unmarshal(kf.Crypto.KdfparamsPack, ksp)
+		kf.Crypto.KdfScryptParams = *ksp
+	case "pbkdf2":
+		kpb := new(KdfPbkdf2params)
+		err = json.Unmarshal(kf.Crypto.KdfparamsPack, kpb)
+		kf.Crypto.KdfPbkdf2params = *kpb
+
+	}
+	return &kf, err
+}
+
 func ReadAndProcessKeyfile(filename string) (keyfile *Keyfile, err error) {
 
 	keyfile, err = ReadKeyfile(filename)
@@ -43,7 +60,20 @@ func ReadAndProcessKeyfile(filename string) (keyfile *Keyfile, err error) {
 	//TODO Handle the unencrypted kyefiles
 
 	//derive the key from password
-	var key []byte
+	key, err := keyfile.KeyFromPass(pass)
+	if err != nil {
+		return
+	}
+	fmt.Println("Verifying MAC...")
+	err = keyfile.VerifyMAC(key)
+	if err != nil {
+		return
+	}
+	keyfile.Plaintext, err = Decrypt(keyfile, key)
+	return
+}
+
+func (keyfile *Keyfile) KeyFromPass(pass []byte) (key []byte, err error) {
 	switch keyfile.Crypto.Kdf {
 	case "scrypt":
 		key, err = KeyFromPassScrypt(pass, keyfile.Crypto.KdfScryptParams)
@@ -60,20 +90,5 @@ func ReadAndProcessKeyfile(filename string) (keyfile *Keyfile, err error) {
 		err = fmt.Errorf("Unsupported KDF: " + keyfile.Crypto.Kdf)
 		return
 	}
-	//Verify MAC
-	//read the ciphertext
-	citx, err := hex.DecodeString(keyfile.Crypto.Ciphertext)
-	if err != nil {
-		return
-	}
-
-	//verify mac
-	mymac := hex.EncodeToString(Keccak256(append(key[16:32], citx...)))
-
-	if mymac != keyfile.Crypto.Mac {
-		err = fmt.Errorf("MAC verification failed")
-	}
-
-	keyfile.Plaintext, err = Decrypt(keyfile, key)
 	return
 }

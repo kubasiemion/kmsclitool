@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -57,20 +58,7 @@ func ReadKeyfile(filename string) (*Keyfile, error) {
 	if err != nil {
 		return nil, err
 	}
-	kf := Keyfile{}
-	err = json.Unmarshal(filebytes, &kf)
-	switch kf.Crypto.Kdf {
-	case "scrypt":
-		ksp := new(KdfScryptparams)
-		err = json.Unmarshal(kf.Crypto.KdfparamsPack, ksp)
-		kf.Crypto.KdfScryptParams = *ksp
-	case "pbkdf2":
-		kpb := new(KdfPbkdf2params)
-		err = json.Unmarshal(kf.Crypto.KdfparamsPack, kpb)
-		kf.Crypto.KdfPbkdf2params = *kpb
-
-	}
-	return &kf, err
+	return ProcessJsonBytes(filebytes)
 
 }
 
@@ -143,4 +131,19 @@ func GenerateKeyFileStruct(pass []byte, kdf string, encalg string, privhex strin
 	kf.Address = addr
 
 	return
+}
+
+func (keyfile *Keyfile) VerifyMAC(key []byte) error {
+	citx, err := hex.DecodeString(keyfile.Crypto.Ciphertext)
+	if err != nil {
+		return err
+	}
+
+	//verify mac
+	mymac := hex.EncodeToString(Keccak256(append(key[16:32], citx...)))
+
+	if mymac != keyfile.Crypto.Mac {
+		return fmt.Errorf("MAC verification failed")
+	}
+	return nil
 }
