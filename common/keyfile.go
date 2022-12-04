@@ -172,3 +172,17 @@ func (kf *Keyfile) UnmarshalKdfJSON() (err error) {
 	}
 	return err
 }
+
+func (kf *Keyfile) Decrypt(pass []byte) (err error) {
+	key, err := kf.KeyFromPass(pass)
+	if err != nil {
+		return
+	}
+	fmt.Println("Verifying MAC...")
+	err = kf.VerifyMAC(key)
+	if err != nil {
+		return
+	}
+	kf.Plaintext, err = Decrypt(kf, key)
+	return
+}

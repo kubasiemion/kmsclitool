@@ -59,16 +59,6 @@ func ReadAndProcessKeyfile(filename string) (keyfile *Keyfile, err error) {
 	}
 	//TODO Handle the unencrypted kyefiles
 
-	//derive the key from password
-	key, err := keyfile.KeyFromPass(pass)
-	if err != nil {
-		return
-	}
-	fmt.Println("Verifying MAC...")
-	err = keyfile.VerifyMAC(key)
-	if err != nil {
-		return
-	}
-	keyfile.Plaintext, err = Decrypt(keyfile, key)
+	err = keyfile.Decrypt(pass)
 	return
 }
