@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"strings"
 	"time"
 
@@ -50,16 +49,6 @@ type KdfPbkdf2params struct {
 	Dklen int    `json:"dklen"`
 	Prf   string `json:"prf"`
 	Salt  string `json:"salt"`
-}
-
-//Reads and parses a json from a file
-func ReadKeyfile(filename string) (*Keyfile, error) {
-	filebytes, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-	return ProcessJsonBytes(filebytes)
-
 }
 
 //Recoveres the encryption key from password
@@ -146,4 +135,40 @@ func (keyfile *Keyfile) VerifyMAC(key []byte) error {
 		return fmt.Errorf("MAC verification failed")
 	}
 	return nil
+}
+
+func (keyfile *Keyfile) KeyFromPass(pass []byte) (key []byte, err error) {
+	switch keyfile.Crypto.Kdf {
+	case "scrypt":
+		key, err = KeyFromPassScrypt(pass, keyfile.Crypto.KdfScryptParams)
+		if err != nil {
+			return
+		}
+
+	case "pbkdf2":
+		key, err = KeyFromPassPbkdf2(pass, keyfile.Crypto.KdfPbkdf2params)
+		if err != nil {
+			return
+		}
+	default:
+		err = fmt.Errorf("Unsupported KDF: " + keyfile.Crypto.Kdf)
+		return
+	}
+	return
+}
+
+func (kf *Keyfile) UnmarshalKdfJSON() (err error) {
+
+	switch kf.Crypto.Kdf {
+	case "scrypt":
+		ksp := new(KdfScryptparams)
+		err = json.Unmarshal(kf.Crypto.KdfparamsPack, ksp)
+		kf.Crypto.KdfScryptParams = *ksp
+	case "pbkdf2":
+		kpb := new(KdfPbkdf2params)
+		err = json.Unmarshal(kf.Crypto.KdfparamsPack, kpb)
+		kf.Crypto.KdfPbkdf2params = *kpb
+
+	}
+	return err
 }

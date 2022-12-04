@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 )
 
 func SetPassword() ([]byte, error) {
@@ -29,21 +30,20 @@ func SetPassword() ([]byte, error) {
 	}
 }
 
-func ProcessJsonBytes(jsonbytes []byte) (keyfile *Keyfile, err error) {
-	kf := Keyfile{}
-	err = json.Unmarshal(jsonbytes, &kf)
-	switch kf.Crypto.Kdf {
-	case "scrypt":
-		ksp := new(KdfScryptparams)
-		err = json.Unmarshal(kf.Crypto.KdfparamsPack, ksp)
-		kf.Crypto.KdfScryptParams = *ksp
-	case "pbkdf2":
-		kpb := new(KdfPbkdf2params)
-		err = json.Unmarshal(kf.Crypto.KdfparamsPack, kpb)
-		kf.Crypto.KdfPbkdf2params = *kpb
-
+//Reads and parses a json from a file
+func ReadKeyfile(filename string) (*Keyfile, error) {
+	filebytes, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
 	}
-	return &kf, err
+	kf := new(Keyfile)
+	err = json.Unmarshal(filebytes, kf)
+	if err != nil {
+		return nil, err
+	}
+	err = kf.UnmarshalKdfJSON()
+	return kf, err
+
 }
 
 func ReadAndProcessKeyfile(filename string) (keyfile *Keyfile, err error) {
@@ -70,25 +70,5 @@ func ReadAndProcessKeyfile(filename string) (keyfile *Keyfile, err error) {
 		return
 	}
 	keyfile.Plaintext, err = Decrypt(keyfile, key)
-	return
-}
-
-func (keyfile *Keyfile) KeyFromPass(pass []byte) (key []byte, err error) {
-	switch keyfile.Crypto.Kdf {
-	case "scrypt":
-		key, err = KeyFromPassScrypt(pass, keyfile.Crypto.KdfScryptParams)
-		if err != nil {
-			return
-		}
-
-	case "pbkdf2":
-		key, err = KeyFromPassPbkdf2(pass, keyfile.Crypto.KdfPbkdf2params)
-		if err != nil {
-			return
-		}
-	default:
-		err = fmt.Errorf("Unsupported KDF: " + keyfile.Crypto.Kdf)
-		return
-	}
 	return
 }
