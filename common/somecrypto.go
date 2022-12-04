@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -202,8 +203,10 @@ func GenerateVanityKey(vanity string, caseSensitive bool) vanityResult {
 		} else {
 			af = func(k []byte) string { a := CRCAddressFromPub(Scalar2Pub(key)); return a[2:] }
 		}
-		rx := regexp.MustCompile(vanity)
-
+		rx, err := regexp.Compile(vanity)
+		if err != nil {
+			return vanityResult{err: err}
+		}
 		for len(rx.FindString(af(key))) == 0 {
 			i++
 			rand.Read(key)
@@ -218,14 +221,20 @@ func GenerateVanityKey(vanity string, caseSensitive bool) vanityResult {
 func TimeConstraindedVanityKey(vanity string, caseSensitive bool, timeout int) ([]byte, error, int, time.Duration) {
 	start := time.Now()
 	result := make(chan vanityResult, 1)
-	go func() {
-		result <- GenerateVanityKey(vanity, caseSensitive)
-	}()
+	Workers := runtime.NumCPU()
+	runtime.GOMAXPROCS(Workers)
+
+	for i := Workers; i > 0; i-- {
+		go func() {
+			result <- GenerateVanityKey(vanity, caseSensitive)
+		}()
+	}
+
 	select {
 	case <-time.After(time.Duration(timeout) * time.Second):
 		return nil, fmt.Errorf("Timeout after %v seconds", timeout), 0, time.Since(start)
 	case result := <-result:
-		return result.key, nil, result.tries, time.Since(start)
+		return result.key, nil, result.tries * runtime.NumCPU(), time.Since(start)
 	}
 
 }

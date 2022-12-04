@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"time"
 
 	"github.com/proveniencenft/kmsclitool/common"
 	"github.com/spf13/cobra"
@@ -23,9 +22,6 @@ var kdf string
 var encalg string
 
 func generateKeyFile(cmd *cobra.Command, args []string) {
-	if len(genFilename) == 0 {
-		genFilename = time.Now().Format(time.RFC3339) + ".json"
-	}
 
 	pass, err := common.SetPassword()
 	if err != nil {
@@ -38,7 +34,6 @@ func generateKeyFile(cmd *cobra.Command, args []string) {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(kf)
 	bytes, err := json.Marshal(kf)
 	if err != nil {
 		fmt.Println(err)
@@ -46,6 +41,10 @@ func generateKeyFile(cmd *cobra.Command, args []string) {
 	}
 	fmt.Printf("Public key: %s\n", kf.PubKey)
 	fmt.Printf("Address: %s\n", kf.Address)
+	if len(genFilename) == 0 {
+		//genFilename = time.Now().Format(time.RFC3339) + ".json"
+		genFilename = kf.Address + ".json"
+	}
 	ioutil.WriteFile(genFilename, bytes, 0644)
 	fmt.Printf("Written to the file: '%s'\n", genFilename)
 	fmt.Printf("Generated in %v tries within %v \n", tries, span)
@@ -70,6 +69,7 @@ func init() {
 	generateKeyFileCmd.Flags().StringVar(&vanity, "vanity", "", "--vanity vanity_address_regexp")
 	generateKeyFileCmd.Flags().BoolVar(&caseSensitive, "vanityCaseSensitive", false, "--vanityCaseSensitive=bool")
 	generateKeyFileCmd.Flags().IntVarP(&timeout, "timeout", "t", 180, "--timeout generation-time-limit-in-seconds")
+
 }
 
 var vanity = ""
