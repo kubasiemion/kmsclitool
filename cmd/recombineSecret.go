@@ -44,6 +44,7 @@ func recombineSecret(cmd *cobra.Command, args []string) {
 		}
 
 	}
+	fmt.Println(recoverSecret(shares))
 
 }
 
@@ -72,60 +73,6 @@ func readShare(filename string) (enough bool) {
 
 }
 
-/*
-func splitKey(key []byte) {
-
-	shares, err := poly.SplitBytes(key, nshares, threshold, *secp256k1.S256().P)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	uuidbase, err := uuid.NewUUID()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	ubytes, err := uuidbase.MarshalBinary()
-	fmt.Println(err, ubytes)
-
-	for i, sh := range shares {
-		uuidbase[0] = byte(i)
-		uid, _ := uuid.FromBytes(uuidbase[:])
-		filename := fmt.Sprintf("%s%02x.json", filenamePat, i)
-		shenc, err := json.Marshal(sh)
-		if err != nil {
-			fmt.Println("Error serializing to json:", err)
-			return
-		}
-		writeShareToFile(filename, uid, shenc, splitAddress)
-	}
-
-}
-
-func writeShareToFile(filename string, uid uuid.UUID, plaintext []byte, addressText string) error {
-	keyf := &common.Keyfile{}
-	keyf.Plaintext = plaintext
-	keyf.ID = uid.String()
-	keyf.Crypto.Cipher = encalg
-	keyf.Crypto.Kdf = kdf
-	pass, err := common.ReadPassword(fmt.Sprintf("Password for %s:", filename))
-	keyf.Address = addressText
-	if err != nil {
-		return err
-	}
-	err = common.EncryptAES(keyf, plaintext, pass)
-	if err != nil {
-		return err
-	}
-	b, err := json.MarshalIndent(keyf, " ", " ")
-	if err != nil {
-		return err
-	}
-	ioutil.WriteFile(filename, b, 0644)
-	return nil
-}
-
 func recoverSecret(sh []poly.Share) ([]byte, error) {
 	i, e := poly.Lagrange(sh)
 	if i != nil {
@@ -135,9 +82,6 @@ func recoverSecret(sh []poly.Share) ([]byte, error) {
 
 }
 
-var secret, filenamePat string
-var nshares, threshold int
-*/
 func init() {
 	rootCmd.AddCommand(recombineSecretCmd)
 

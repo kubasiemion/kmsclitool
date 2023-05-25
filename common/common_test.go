@@ -1,6 +1,8 @@
 package common
 
 import (
+	"encoding/hex"
+	"fmt"
 	"testing"
 )
 
@@ -9,7 +11,7 @@ func TestRead(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	key, err := kf.KeyFromPass([]byte("bbbbbb"))
+	key, err := kf.KeyFromPass([]byte("aaaaaa"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -17,4 +19,13 @@ func TestRead(t *testing.T) {
 		t.Error("MAC verification error")
 	}
 
+}
+
+func TestAddress(t *testing.T) {
+	faddr, _ := hex.DecodeString("d9145CCE52D386f254917e481eB44e9943F39138")
+	var i uint
+	for i = 0; i < 4; i++ {
+		caddr, err := CalcCREATEAddress(faddr, i)
+		fmt.Println(hex.EncodeToString(caddr), err)
+	}
 }

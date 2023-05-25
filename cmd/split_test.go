@@ -45,6 +45,14 @@ func TestSplit(t *testing.T) {
 	}
 
 	secretString := "Duda Jasio"
-	SplitString(secretString)
+	shares, err := SplitString(secretString, 3, 2)
+	if err != nil {
+		t.Errorf("Bad shares: %s", err)
+	}
+	s, err := RecoverString(shares)
+	if err != nil {
+		t.Errorf("Error reassembling string: %s", err)
+	}
+	fmt.Println(s)
 
 }

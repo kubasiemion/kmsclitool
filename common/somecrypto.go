@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/dcrec/secp256k1"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
@@ -237,4 +238,38 @@ func TimeConstraindedVanityKey(vanity string, caseSensitive bool, timeout int) (
 		return result.key, nil, result.tries * runtime.NumCPU(), time.Since(start)
 	}
 
+}
+
+func CalcCREATEAddress(address []byte, nonce uint) ([]byte, error) {
+	if len(address) != 20 {
+		return nil, fmt.Errorf("Wrong address length: %v", len(address))
+	}
+	data, err := rlp.EncodeToBytes([]interface{}{address, nonce})
+	if err != nil {
+		return nil, err
+	}
+
+	return Keccak256(data)[12:], nil
+
+}
+
+func CalcCREATE2Address(address, codehash, salt []byte, nonce uint) ([]byte, error) {
+	if len(salt) != 32 {
+		return nil, fmt.Errorf("Wrong salt length")
+	}
+	if len(address) != 20 {
+		return nil, fmt.Errorf("Wrong address length: %v", len(address))
+	}
+	return Keccak256([]byte{0xff}, address, salt[:], codehash)[12:], nil
+
+}
+
+func ParseHexString(hexstring string) ([]byte, error) {
+	if len(hexstring) > 1 {
+		if hexstring[:2] == "0x" {
+			hexstring = hexstring[2:]
+		}
+	}
+
+	return hex.DecodeString(hexstring)
 }

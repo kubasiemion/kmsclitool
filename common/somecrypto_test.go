@@ -1,6 +1,8 @@
 package common
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/hex"
 	"fmt"
 	"testing"
@@ -18,4 +20,6 @@ func TestCRC(t *testing.T) {
 	fmt.Println(adrstr)
 	fmt.Println(adrstr2)
 	fmt.Println(addrKecc(adrbytes))
+
+	rsa.GenerateKey(rand.Reader, 1024)
 }

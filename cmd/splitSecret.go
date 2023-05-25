@@ -45,16 +45,16 @@ func splitSecret(cmd *cobra.Command, args []string) {
 			fmt.Println(err)
 			return
 		}
-		splitKey(key)
+		splitKey(key, numshares, threshold)
 	} else {
-		SplitString(secret)
+		SplitString(secret, numshares, threshold)
 	}
 
 }
 
-func splitKey(key []byte) {
+func splitKey(key []byte, n, t int) {
 
-	shares, err := poly.SplitBytes(key, nshares, threshold, *secp256k1.S256().P)
+	shares, err := poly.SplitBytes(key, n, t, *secp256k1.S256().P)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -105,17 +105,8 @@ func writeShareToFile(filename string, uid uuid.UUID, plaintext []byte, addressT
 	return nil
 }
 
-func recoverSecret(sh []poly.Share) ([]byte, error) {
-	i, e := poly.Lagrange(sh)
-	if i != nil {
-		return i.Bytes(), e
-	}
-	return nil, e
-
-}
-
 var secret, filenamePat string
-var nshares, threshold int
+var numshares, threshold int
 
 func init() {
 	rootCmd.AddCommand(splitSecretCmd)
@@ -124,15 +115,20 @@ func init() {
 	splitSecretCmd.Flags().StringVar(&kdf, "kdf", "scrypt", "--kdf preferredKDF")
 	splitSecretCmd.Flags().StringVarP(&filenamePat, "fileptrn", "f", "splitkey", "--fileptrn filename_Pattern")
 	splitSecretCmd.Flags().StringVarP(&secret, "secret", "s", "", "--secret your_secret")
-	splitSecretCmd.Flags().IntVarP(&nshares, "nshares", "n", 2, "--nshares number_of_shares")
+	splitSecretCmd.Flags().IntVarP(&numshares, "nshares", "n", 2, "--nshares number_of_shares")
 	splitSecretCmd.Flags().IntVarP(&threshold, "threshold", "t", 2, "--theshold no_of_shares_needed")
 	splitSecretCmd.Flags().BoolVar(&isSecretAKey, "iskey", true, "--iskey false if-splitting-a-string")
 }
 
 var isSecretAKey bool
 
-func SplitString(s string) ([]gf256.Share, error) {
+func SplitString(s string, nshares, t int) ([]gf256.Share, error) {
 	sh := gf256.Share{}
 	sh.Value = []byte{}
-	return gf256.SplitBytes([]byte(s), nshares, threshold)
+	return gf256.SplitBytes([]byte(s), nshares, t)
+}
+
+func RecoverString(shares []gf256.Share) (string, error) {
+	b, err := gf256.RecoverBytes(shares)
+	return string(b), err
 }

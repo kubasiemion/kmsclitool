@@ -89,11 +89,8 @@ func GenerateKeyFileStruct(pass []byte, kdf string, encalg string, privhex strin
 
 	ethkey := make([]byte, 32)
 	if len(privhex) > 1 {
-		if privhex[:2] == "0x" {
-			privhex = privhex[2:]
-		}
 		var privb []byte
-		privb, err = hex.DecodeString(privhex)
+		privb, err = ParseHexString(privhex)
 		if err != nil {
 			return
 		}
