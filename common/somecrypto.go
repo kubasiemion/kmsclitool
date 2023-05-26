@@ -110,7 +110,7 @@ func Decrypt(kf *Keyfile, key []byte) (plaintext []byte, err error) {
 
 func DecryptAES(kf *Keyfile, key []byte) (privkey []byte, err error) {
 
-	block, err := aes.NewCipher(key[0:16])
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		return
 	}
