@@ -4,6 +4,13 @@ off-line cli tool for digital key management
 Yet another tool to manage Ethereum keyfiles, this one written in Go...
 ...because the only other tools I have been able to find are JS/Python (so interpreted).
 
+Functionality:
+  Generating, writing and reading standard Ethereum keyfiles, as used by, e.g. , Metamask
+  Generating vanity addresses
+  Genrating split (Shamir Secret Sharing) keys across multiple files
+  Reassembling SSS shares into a public/private key
+
+
 Usage:
   kmsclitool [command]
 
