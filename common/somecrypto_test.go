@@ -23,3 +23,66 @@ func TestCRC(t *testing.T) {
 
 	rsa.GenerateKey(rand.Reader, 1024)
 }
+
+func TestEncryptCTR(t *testing.T) {
+
+	keyf := &Keyfile{}
+	keyf.Crypto.Cipher = "aes-128-ctr"
+	keyf.Crypto.Kdf = "scrypt"
+	password := []byte("password")
+	plaintext := []byte("plaintext")
+	EncryptAES(keyf, plaintext, password)
+
+	fmt.Println(keyf.Crypto.Ciphertext)
+
+	err := keyf.Decrypt(password)
+	if err != nil {
+		t.Error(err)
+	}
+	if string(keyf.Plaintext) != string(plaintext) {
+		t.Error("Decryption error")
+	} else {
+		fmt.Println("Decryption OK for AES-128-CTR")
+	}
+
+	keyf.Crypto.Cipher = "aes-128-ctr"
+	EncryptAES(keyf, plaintext, password)
+	err = keyf.Decrypt(password)
+	if err != nil {
+		t.Error(err)
+	}
+	if string(keyf.Plaintext) != string(plaintext) {
+		t.Error("Decryption error")
+	} else {
+		fmt.Println("Decryption OK for AES-256-CTR")
+	}
+
+	keyf.Crypto.Cipher = "aes-256-gcm"
+	EncryptAES(keyf, plaintext, password)
+	fmt.Println(keyf.Crypto.Ciphertext)
+
+	err = keyf.Decrypt(password)
+	if err != nil {
+		t.Error(err)
+	}
+	if string(keyf.Plaintext) != string(plaintext) {
+		t.Error("Decryption error")
+	} else {
+		fmt.Println("Decryption OK for AES-256-GCM")
+	}
+
+	keyf.Crypto.Cipher = "aes-128-gcm"
+	EncryptAES(keyf, plaintext, password)
+	fmt.Println(keyf.Crypto.Ciphertext)
+
+	err = keyf.Decrypt(password)
+	if err != nil {
+		t.Error(err)
+	}
+	if string(keyf.Plaintext) != string(plaintext) {
+		t.Error("Decryption error")
+	} else {
+		fmt.Println("Decryption OK for AES-128-GCM")
+	}
+
+}

@@ -59,8 +59,8 @@ func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
 	}
 
 	//Letsencrypt
-	iv := make([]byte, 16)
-	rand.Read(iv)
+	var iv []byte
+	ivlen := 16
 
 	var flavour = "ctr" //default; crt or gcm
 	var aeskeylen int
@@ -70,14 +70,19 @@ func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
 	case "aes-128-gcm":
 		aeskeylen = 16
 		flavour = "gcm"
+		ivlen = 12
 	case "aes-256-ctr":
 		aeskeylen = 32
 	case "aes-256-gcm":
 		aeskeylen = 32
 		flavour = "gcm"
+		ivlen = 12
 	default:
 		return fmt.Errorf("Unsupported encryption: %s", kf.Crypto.Cipher)
 	}
+
+	iv = make([]byte, ivlen)
+	rand.Read(iv)
 
 	block, err := aes.NewCipher(key[0:aeskeylen])
 	if err != nil {
@@ -86,7 +91,7 @@ func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
 	ciphertext := make([]byte, len(plaintext))
 
 	switch flavour {
-	case "crt":
+	case "ctr":
 		stream := cipher.NewCTR(block, iv)
 		stream.XORKeyStream(ciphertext, plaintext)
 	case "gcm":
@@ -118,10 +123,35 @@ func Decrypt(kf *Keyfile, key []byte) (plaintext []byte, err error) {
 		plaintext, err = DecryptAESCTR(kf, key[:16])
 	case "aes-256-ctr":
 		plaintext, err = DecryptAESCTR(kf, key)
+	case "aes-128-gcm":
+		plaintext, err = DecryptAESGCM(kf, key[:16])
+	case "aes-256-gcm":
+		plaintext, err = DecryptAESGCM(kf, key)
 	default:
 		err = fmt.Errorf("Not implemented cipher: %s\n", kf.Crypto.Cipher)
 		return
 	}
+	return
+}
+
+func DecryptAESGCM(kf *Keyfile, key []byte) (plaintext []byte, err error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return
+	}
+	iv, err := hex.DecodeString(kf.Crypto.Cipherparams.Iv)
+	if err != nil {
+		return
+	}
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return
+	}
+	citx, err := hex.DecodeString(kf.Crypto.Ciphertext)
+	if err != nil {
+		return
+	}
+	plaintext, err = aesgcm.Open(nil, iv, citx, nil)
 	return
 }
 
