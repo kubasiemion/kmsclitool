@@ -3,7 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/proveniencenft/kmsclitool/common"
 	"github.com/spf13/cobra"
@@ -45,7 +45,7 @@ func generateKeyFile(cmd *cobra.Command, args []string) {
 		//genFilename = time.Now().Format(time.RFC3339) + ".json"
 		genFilename = kf.Address + ".json"
 	}
-	ioutil.WriteFile(genFilename, bytes, 0644)
+	os.WriteFile(genFilename, bytes, 0644)
 	fmt.Printf("Written to the file: '%s'\n", genFilename)
 	fmt.Printf("Generated in %v tries within %v \n", tries, span)
 }

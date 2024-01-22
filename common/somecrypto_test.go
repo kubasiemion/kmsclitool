@@ -86,3 +86,43 @@ func TestEncryptCTR(t *testing.T) {
 	}
 
 }
+
+// test path convertion
+func TestPath(t *testing.T) {
+	path := `m/44'/60'/0'/0/0`
+	ipath, err := PathToUint32(path)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(ipath)
+	path2 := `m/44'/60/0'/0/0`
+	ipath2, err := PathToUint32(path2)
+	if err != nil {
+		t.Error(err)
+	}
+	for i, v := range ipath2 {
+		fmt.Printf("%v: %x\n", i, v)
+	}
+}
+
+func TestDerive(t *testing.T) {
+	key := []byte("12345678901234567890123456789012")
+	seed := []byte("12345678901234567890123456789012")
+	rkey, err := RootKeyFromKey(key, seed)
+	if err != nil {
+		t.Error(err)
+	}
+	spath := `m/44'/60'/0'/0/1/17'`
+	path, err := PathToUint32(spath)
+	if err != nil {
+		t.Error(err)
+	}
+
+	ckey, err := DeriveChildKey(rkey, path)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(rkey)
+	fmt.Println(ckey, hex.EncodeToString(ckey.Key), hex.EncodeToString(ckey.ChainCode), ckey.Depth, ckey.ChildNumber, ckey.FingerPrint, ckey.Version)
+
+}
