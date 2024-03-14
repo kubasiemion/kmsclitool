@@ -9,41 +9,37 @@ import (
 
 func calculateAddress(cmd *cobra.Command, args []string) {
 
-	deployer, err := common.ParseHexString(addr)
-	if err != nil {
-		fmt.Println(err)
+	if len(addr) > 20 {
+		fmt.Printf("Wrong address length: %v", len(addr))
 		return
 	}
-	if len(deployer) > 20 {
-		fmt.Printf("Wrong address length: %v", len(deployer))
-		return
-	}
-	dep20 := make([]byte, 20)
-	copy(dep20[20-len(deployer):], deployer) //padding
-	baddr, err := common.CalcCREATEAddress(dep20, nonce)
+	addr = common.Pad(addr, 20)
+	baddr, err := common.CalcCREATEAddress(addr, nonce)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	caddr := common.CRCAddressString(baddr)
-	fmt.Printf("Deployer: %x, Nonce: %v\n", dep20, nonce)
+	fmt.Printf("Deployer: %x, Nonce: %v\n", addr, nonce)
 	fmt.Printf("Contract address: %s\n", caddr)
 }
 
 var calculateAddressCmd = &cobra.Command{
-	Use:   "calculateAddress",
-	Short: "N/A",
-	Long:  "N/A",
+	Use:   "calculateAddress -a <address> -n <nonce>",
+	Short: "Calculate CREATE contract address.",
+	Long:  "Calculate CREATE contract address from deployer address and nonce.",
 	Run:   calculateAddress,
 }
 
 func init() {
 	rootCmd.AddCommand(calculateAddressCmd)
 
-	calculateAddressCmd.Flags().StringVarP(&addr, "addr", "a", "", "Ethereum address of the Deployer")
+	calculateAddressCmd.Flags().BytesHexVarP(&addr, "addr", "a", nil, "Ethereum address of the Deployer")
 	calculateAddressCmd.Flags().UintVarP(&nonce, "nonce", "n", 0, "Nonce of the Deployer")
+	calculateAddressCmd.MarkFlagRequired("addr")
+	calculateAddressCmd.MarkFlagRequired("nonce")
 
 }
 
-var addr string
+var addr []byte //Ethereum address of the Deployer]
 var nonce uint

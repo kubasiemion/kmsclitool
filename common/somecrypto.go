@@ -34,20 +34,18 @@ func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
 	var scryptparams interface{}
 	switch kf.Crypto.Kdf {
 	case "scrypt":
-		kf.Crypto.KdfScryptParams.Dklen = 32
-		kf.Crypto.KdfScryptParams.N = 131072
-		kf.Crypto.KdfScryptParams.P = 1
-		kf.Crypto.KdfScryptParams.R = 8
+
+		kf.Crypto.KdfScryptParams = *StdScryptParams()
 		kf.Crypto.KdfScryptParams.Salt = hex.EncodeToString(salt)
 		key, err = KeyFromPassScrypt(password, kf.Crypto.KdfScryptParams)
 		if err != nil {
 			return err
 		}
 		scryptparams = &kf.Crypto.KdfScryptParams
+
 	case "pbkdf2":
-		kf.Crypto.KdfPbkdf2params.C = 262144
-		kf.Crypto.KdfPbkdf2params.Dklen = 32
-		kf.Crypto.KdfPbkdf2params.Prf = "hmac-sha256"
+
+		kf.Crypto.KdfPbkdf2params = *StdPbkdf2Params()
 		kf.Crypto.KdfPbkdf2params.Salt = hex.EncodeToString(salt)
 		key, err = KeyFromPassPbkdf2(password, kf.Crypto.KdfPbkdf2params)
 		if err != nil {
@@ -302,7 +300,7 @@ func CalcCREATEAddress(address []byte, nonce uint) ([]byte, error) {
 
 }
 
-func CalcCREATE2Address(address, codehash, salt []byte, nonce uint) ([]byte, error) {
+func CalcCREATE2Address(address, codehash, salt []byte) ([]byte, error) {
 	if len(salt) != 32 {
 		return nil, fmt.Errorf("Wrong salt length")
 	}
@@ -372,4 +370,29 @@ func PathToUint32(path string) ([]uint32, error) {
 		patharr = append(patharr, uint32(i)+offset)
 	}
 	return patharr, nil
+}
+
+type KdfScryptparams struct {
+	Dklen int    `json:"dklen"`
+	Salt  string `json:"salt"`
+	N     int    `json:"n"`
+	R     int    `json:"r"`
+	P     int    `json:"p"`
+}
+
+type KdfPbkdf2params struct {
+	C     int    `json:"c"`
+	Dklen int    `json:"dklen"`
+	Prf   string `json:"prf"`
+	Salt  string `json:"salt"`
+}
+
+// function returning stadard scryp parameters as KdfScryptparams struct
+func StdScryptParams() *KdfScryptparams {
+	return &KdfScryptparams{Dklen: 32, N: 131072, P: 1, R: 8}
+}
+
+// function returning stadard pbkdf2 parameters as KdfPbkdf2params struct
+func StdPbkdf2Params() *KdfPbkdf2params {
+	return &KdfPbkdf2params{C: 262144, Dklen: 32, Prf: "hmac-sha256"}
 }

@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 	"golang.org/x/crypto/sha3"
@@ -34,24 +33,11 @@ type Keyfile struct {
 	} `json:"crypto"`
 	Plaintext []byte `json:"-"`
 	PubKey    string `json:"-"`
+	Hint      string `json:"hint,omitempty"`
+	Filename  string `json:"-"`
 }
 
-type KdfScryptparams struct {
-	Dklen int    `json:"dklen"`
-	Salt  string `json:"salt"`
-	N     int    `json:"n"`
-	R     int    `json:"r"`
-	P     int    `json:"p"`
-}
-
-type KdfPbkdf2params struct {
-	C     int    `json:"c"`
-	Dklen int    `json:"dklen"`
-	Prf   string `json:"prf"`
-	Salt  string `json:"salt"`
-}
-
-//Recoveres the encryption key from password
+// Recoveres the encryption key from password
 func KeyFromPassScrypt(password []byte, params KdfScryptparams) ([]byte, error) {
 	salt, err := hex.DecodeString(params.Salt)
 	if err != nil {
@@ -60,7 +46,7 @@ func KeyFromPassScrypt(password []byte, params KdfScryptparams) ([]byte, error) 
 	return scrypt.Key(password, salt, params.N, params.R, params.P, params.Dklen)
 }
 
-//Recoveres the encryption key from password
+// Recoveres the encryption key from password
 func KeyFromPassPbkdf2(password []byte, params KdfPbkdf2params) ([]byte, error) {
 	salt, err := hex.DecodeString(params.Salt)
 	if err != nil {
@@ -70,7 +56,7 @@ func KeyFromPassPbkdf2(password []byte, params KdfPbkdf2params) ([]byte, error) 
 
 }
 
-//Just a convenience wrapper copied from geth
+// Just a convenience wrapper copied from geth
 func Keccak256(data ...[]byte) []byte {
 	d := sha3.NewLegacyKeccak256()
 	for _, b := range data {
@@ -79,25 +65,17 @@ func Keccak256(data ...[]byte) []byte {
 	return d.Sum(nil)
 }
 
-func GenerateKeyFileStruct(pass []byte, kdf string, encalg string, privhex string, vanity string, caseSensitive bool, timeout int) (kf *Keyfile, err error, tries int, span time.Duration) {
+func GenerateAndWrapNewKey(pass []byte, kdf string, encalg string, priv []byte, vanity string, caseSensitive bool, timeout int) (kf *Keyfile, err error, tries int, span time.Duration) {
 	kf = &Keyfile{}
 
 	kf.Crypto.Kdf = kdf
 	kf.Crypto.Cipher = strings.ToLower(encalg)
-	xuuid, err := uuid.NewUUID()
-	kf.ID = xuuid.String()
-
+	kf.ID = NewUuid().String()
 	ethkey := make([]byte, 32)
-	if len(privhex) > 1 {
-		var privb []byte
-		privb, err = ParseHexString(privhex)
-		if err != nil {
-			return
-		}
-		if len(privb) > 32 {
-			privb = privb[:32]
-		}
-		copy(ethkey[32-len(privb):], privb) //padding
+	if len(priv) > 1 {
+
+		ethkey = Pad(priv, 32)
+
 	} else {
 		//Generate the Koblitz private key
 		ethkey, err, tries, span = TimeConstraindedVanityKey(vanity, caseSensitive, timeout)
@@ -181,5 +159,22 @@ func (kf *Keyfile) Decrypt(pass []byte) (err error) {
 		return
 	}
 	kf.Plaintext, err = Decrypt(kf, key)
+	return
+}
+
+func (kf *Keyfile) Serialize() (jsonbytes []byte, err error) {
+	jsonbytes, err = json.MarshalIndent(kf, "", "  ")
+	return
+}
+
+func (kf *Keyfile) Deserialize(jsonbytes []byte) (err error) {
+	if kf == nil {
+		kf = new(Keyfile)
+	}
+	err = json.Unmarshal(jsonbytes, kf)
+	if err != nil {
+		return
+	}
+	err = kf.UnmarshalKdfJSON()
 	return
 }

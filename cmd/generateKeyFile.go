@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/proveniencenft/kmsclitool/common"
 	"github.com/spf13/cobra"
@@ -23,31 +21,30 @@ var encalg string
 
 func generateKeyFile(cmd *cobra.Command, args []string) {
 
-	pass, err := common.SetPassword()
+	pass, err := common.SetPassword("Password for the keyfile:")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	kf, err, tries, span := common.GenerateKeyFileStruct(pass, kdf, encalg, privhex, vanity, caseSensitive, timeout)
+	kf, err, tries, span := common.GenerateAndWrapNewKey(pass, kdf, encalg, privhex, vanity, caseSensitive, timeout)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	bytes, err := json.Marshal(kf)
+
+	kf.Hint, err = common.GetPasswordHint()
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
+
 	fmt.Printf("Public key: %s\n", kf.PubKey)
 	fmt.Printf("Address: %s\n", kf.Address)
-	if len(genFilename) == 0 {
-		//genFilename = time.Now().Format(time.RFC3339) + ".json"
-		genFilename = kf.Address + ".json"
+	common.WriteKeyfile(kf, genFilename)
+	fmt.Printf("Written to the file: '%s'\n", kf.Filename)
+	if len(vanity) > 0 {
+		fmt.Printf("Generated in %v tries within %v \n", tries, span)
 	}
-	os.WriteFile(genFilename, bytes, 0644)
-	fmt.Printf("Written to the file: '%s'\n", genFilename)
-	fmt.Printf("Generated in %v tries within %v \n", tries, span)
 }
 
 func init() {
@@ -65,7 +62,7 @@ func init() {
 	generateKeyFileCmd.Flags().StringVar(&encalg, "encalg", "aes-128-ctr", "--encalg symm-encryption-algo")
 	generateKeyFileCmd.Flags().StringVar(&kdf, "kdf", "pbkdf2", "--kdf preferredKDF")
 	generateKeyFileCmd.Flags().StringVarP(&genFilename, "file", "f", "", "--file filename")
-	generateKeyFileCmd.Flags().StringVar(&privhex, "priv", "", "--priv private_key_in_hex")
+	generateKeyFileCmd.Flags().BytesHexVar(&privhex, "priv", nil, "--priv private_key_in_hex")
 	generateKeyFileCmd.Flags().StringVar(&vanity, "vanity", "", "--vanity vanity_address_regexp")
 	generateKeyFileCmd.Flags().BoolVar(&caseSensitive, "vanityCaseSensitive", false, "--vanityCaseSensitive=bool")
 	generateKeyFileCmd.Flags().IntVarP(&timeout, "timeout", "t", 180, "--timeout generation-time-limit-in-seconds")
