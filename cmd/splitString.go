@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/proveniencenft/kmsclitool/common"
 	"github.com/proveniencenft/primesecrets/gf256"
 	"github.com/spf13/cobra"
@@ -20,43 +17,7 @@ var splitStringCmd = &cobra.Command{
 }
 
 func splitStringWrapper(cmd *cobra.Command, args []string) {
-	splitBytesToFiles([]byte(secret), filenamePat4String, numshares, threshold)
-}
-
-func splitBytesToFiles(secret []byte, fpattern string, numshares, threshold int) {
-
-	if len(secret) == 0 {
-		fmt.Println("No secret to split")
-		return
-	}
-
-	shares, err := gf256.SplitBytes(secret, numshares, threshold)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	secrets := make([][]byte, len(shares))
-	for i, sh := range shares {
-		secrets[i], err = json.Marshal(sh)
-		if err != nil {
-			fmt.Println("Error serializing to json:", err)
-			return
-		}
-	}
-	uuidbase := common.NewUuid()
-	kfs, err := WrapNSecrets(fpattern, uuidbase, secrets, splitStringLabel)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	for _, kf := range kfs {
-		err = common.WriteKeyfile(kf, "")
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-	}
-
+	common.SplitBytesToFiles([]byte(secret), filenamePat4String, numshares, threshold, encalg, kdf, splitStringLabel)
 }
 
 var secret, filenamePat4String string

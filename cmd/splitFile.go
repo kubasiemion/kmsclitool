@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/proveniencenft/kmsclitool/common"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +24,15 @@ func splitFileWrapper(cmd *cobra.Command, args []string) {
 		fmt.Println(err)
 		return
 	}
-	splitBytesToFiles(bt, filenamePat4File, numshares, threshold)
+	c, _ := cmd.Flags().GetBool("compress")
+	if c {
+		bt, err = common.FlateData(bt)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
+	common.SplitBytesToFiles(bt, filenamePat4File, numshares, threshold, encalg, kdf, "File contains a shard of "+infile)
 }
 
 var infile string
@@ -37,6 +46,7 @@ func init() {
 	splitFileCmd.Flags().StringVar(&infile, "in", "", "--in filename")
 	splitFileCmd.Flags().IntVarP(&numshares, "nshares", "n", 2, "--nshares number_of_shares")
 	splitFileCmd.Flags().IntVarP(&threshold, "threshold", "t", 2, "--theshold no_of_shares_needed")
+	splitFileCmd.Flags().Bool("compress", false, "--compress true/false")
 	splitFileCmd.MarkFlagRequired("in")
 
 }

@@ -21,7 +21,7 @@ func splitKeyFileWrapper(cmd *cobra.Command, args []string) {
 		fmt.Println("Error parsing keyfile:", err)
 		return
 	}
-	splitBytesToFiles(kf.Plaintext, filenamePat4KeyFile, numshares, threshold)
+	common.SplitBytesToFiles(kf.Plaintext, filenamePat4KeyFile, numshares, threshold, encalg, kdf, "File contains a shard of a secret for "+kf.Address)
 }
 
 var filenamePat4KeyFile string

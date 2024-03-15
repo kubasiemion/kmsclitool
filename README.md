@@ -1,5 +1,7 @@
 # kmsclitool
+
 off-line cli tool for digital key management
+
 ```
 Yet another tool to manage Ethereum keyfiles, this one written in Go...
 ...because the only other tools I have been able to find are JS/Python (so interpreted).
@@ -15,17 +17,25 @@ Usage:
   kmsclitool [command]
 
 Available Commands:
-  adrFromPriv     derive address from a given private key
-  changePassword  Changes password of a keyfile
-  completion      Generate the autocompletion script for the specified shell
-  generateKeyFile Generate a new keyfile
-  help            Help about any command
-  readKeyFile     Read an Ethereum key file
-  recombineSecret Recovers a secret from t/n files (shamir's scheme)
-  splitSecret     Split a secret t/n (shamir's scheme)
+  adrFromPriv       derive address from a given private key
+  calculateAddress  Calculate CREATE contract address.
+  calculateAddress2 Calculate CREATE2 contract address.
+  changePassword    Changes password of a keyfile
+  completion        Generate the autocompletion script for the specified shell
+  generateKeyFile   Generate a new keyfile (supports vanity address requests)
+  help              Help about any command
+  readKeyFile       Read an Ethereum key file
+  recoverEthKey     Recovers an Eth key from t/n files (shamir's scheme)
+  recoverFile       Recovers a secret form t out of n shares  (shamir's scheme)
+  recoverKeyFile    Recovers a keyfile form t out of n shares  (shamir's scheme)
+  recoverString     Recovers a secret form t out of n shares  (shamir's scheme)
+  splitEthKey       Split an Eth key t/n (shamir's scheme)
+  splitFile         Split a file t/n (shamir's scheme)
+  splitKeyFile      Split a secret t/n (shamir's scheme)
+  splitString       Split a secret t/n (shamir's scheme)
 
 Flags:
   -h, --help   help for kmsclitool
 
 Use "kmsclitool [command] --help" for more information about a command.
-  ```
+```

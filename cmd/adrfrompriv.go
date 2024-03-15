@@ -17,7 +17,7 @@ func init() {
 var privhex []byte
 
 var adrFromPrivCmd = &cobra.Command{
-	Use:   "adrFromPriv",
+	Use:   "addrFromPriv",
 	Short: "derive address from a given private key",
 	Long:  "long",
 	Run:   adrFromPriv,

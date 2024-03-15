@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 
@@ -48,6 +49,13 @@ func recoverFile(cmd *cobra.Command, args []string) {
 	if err != nil {
 		fmt.Println(err)
 		return
+	}
+	if bytes.Equal(rec[:3], common.FlateHeader) {
+		rec, err = common.UnflateData(rec)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 	}
 	os.WriteFile(outfile, rec, 0644)
 }

@@ -53,7 +53,7 @@ func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
 		}
 		scryptparams = &kf.Crypto.KdfPbkdf2params
 	default:
-		return fmt.Errorf("Unsupported KDF scheme")
+		return fmt.Errorf("Unsupported KDF scheme: %s", kf.Crypto.Kdf)
 
 	}
 

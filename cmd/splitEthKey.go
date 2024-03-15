@@ -61,45 +61,7 @@ func splitKey(key []byte, n, t int) ([]*common.Keyfile, error) {
 	}
 	//kf, err := WrapSecret(filename, uuidbase.NthUuidString(i, 1), shenc, splitAddress)
 
-	return WrapNSecrets(filenamePat4Key, uuidbase, secrets, splitAddress)
-}
-
-func WrapNSecrets(filenameptrn string, idptrn *common.Uuid, plaintexts [][]byte, addressTextPtrn string) ([]*common.Keyfile, error) {
-	kfs := make([]*common.Keyfile, len(plaintexts))
-	var err error
-	for i, sec := range plaintexts {
-		filename := fmt.Sprintf("%s%02x.json", filenameptrn, i)
-		id := idptrn.Next()
-		kfs[i], err = WrapSecret(filename, id, sec, addressTextPtrn)
-		if err != nil {
-			return nil, err
-		}
-
-	}
-	return kfs, nil
-}
-
-func WrapSecret(filename string, id string, plaintext []byte, addressText string) (*common.Keyfile, error) {
-	keyf := &common.Keyfile{}
-	keyf.Plaintext = plaintext
-	keyf.ID = id
-	keyf.Crypto.Cipher = encalg
-	keyf.Crypto.Kdf = kdf
-	pass, err := common.SetPassword(fmt.Sprintf("Password for %s:", filename))
-	if err != nil {
-		return nil, err
-	}
-	keyf.Hint, _ = common.GetPasswordHint()
-	keyf.Address = addressText
-	if err != nil {
-		return nil, err
-	}
-	err = common.EncryptAES(keyf, plaintext, pass)
-	if err != nil {
-		return nil, err
-	}
-	keyf.Filename = filename
-	return keyf, nil
+	return common.WrapNSecrets(filenamePat4Key, uuidbase, secrets, encalg, kdf, splitAddress)
 }
 
 var numshares, threshold int
@@ -110,7 +72,7 @@ func init() {
 	splitEthKeyCmd.Flags().StringVar(&encalg, "encalg", "aes-128-ctr", "--encalg symm-encryption-algo")
 	splitEthKeyCmd.Flags().StringVar(&kdf, "kdf", "scrypt", "--kdf preferredKDF")
 	splitEthKeyCmd.Flags().StringVarP(&filenamePat4Key, "fileptrn", "f", "splitKey", "--fileptrn filename_Pattern")
-	splitEthKeyCmd.Flags().BytesHexVarP(&privhex, "privkey", "s", nil, "--privkey your_secret key (in hex)")
+	splitEthKeyCmd.Flags().BytesHexVarP(&privhex, "privkey", "p", nil, "--privkey your_secret key (in hex)")
 	splitEthKeyCmd.Flags().IntVarP(&numshares, "nshares", "n", 2, "--nshares number_of_shares")
 	splitEthKeyCmd.Flags().IntVarP(&threshold, "threshold", "t", 2, "--theshold no_of_shares_needed")
 

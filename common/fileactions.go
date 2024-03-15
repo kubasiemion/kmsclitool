@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/proveniencenft/primesecrets/gf256"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -113,7 +114,82 @@ func WriteKeyfile(kf *Keyfile, filename string) error {
 	}
 	if len(actualfilename) == 0 {
 		actualfilename = kf.Address + ".json"
-		kf.Filename = actualfilename
+
 	}
+	kf.Filename = actualfilename
 	return os.WriteFile(actualfilename, jsonbytes, 0644)
+}
+
+func SplitBytesToFiles(secret []byte, fpattern string, numshares, threshold int, encalg, kdf, addrlabel string) {
+
+	if len(secret) == 0 {
+		fmt.Println("No secret to split")
+		return
+	}
+
+	shares, err := gf256.SplitBytes(secret, numshares, threshold)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	secrets := make([][]byte, len(shares))
+	for i, sh := range shares {
+		secrets[i], err = json.Marshal(sh)
+		if err != nil {
+			fmt.Println("Error serializing to json:", err)
+			return
+		}
+	}
+	uuidbase := NewUuid()
+	kfs, err := WrapNSecrets(fpattern, uuidbase, secrets, encalg, kdf, addrlabel)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	for _, kf := range kfs {
+		err = WriteKeyfile(kf, "")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
+
+}
+
+func WrapNSecrets(filenameptrn string, idptrn *Uuid, plaintexts [][]byte, encalg, kdf, addressTextPtrn string) ([]*Keyfile, error) {
+	kfs := make([]*Keyfile, len(plaintexts))
+	var err error
+	for i, sec := range plaintexts {
+		filename := fmt.Sprintf("%s%02x.json", filenameptrn, i)
+		id := idptrn.Next()
+		kfs[i], err = WrapSecret(filename, id, sec, encalg, kdf, addressTextPtrn)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+	return kfs, nil
+}
+
+func WrapSecret(filename string, id string, plaintext []byte, encalg, kdf, addressText string) (*Keyfile, error) {
+	keyf := &Keyfile{}
+	keyf.Plaintext = plaintext
+	keyf.ID = id
+	keyf.Crypto.Cipher = encalg
+	keyf.Crypto.Kdf = kdf
+	pass, err := SetPassword(fmt.Sprintf("Password for %s:", filename))
+	if err != nil {
+		return nil, err
+	}
+	keyf.Hint, _ = GetPasswordHint()
+	keyf.Address = addressText
+	if err != nil {
+		return nil, err
+	}
+	err = EncryptAES(keyf, plaintext, pass)
+	if err != nil {
+		return nil, err
+	}
+	keyf.Filename = filename
+	return keyf, nil
 }
