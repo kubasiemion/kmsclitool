@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/proveniencenft/kmsclitool/common"
 	"github.com/spf13/cobra"
@@ -20,31 +22,44 @@ var kdf string
 var encalg string
 
 func generateKeyFile(cmd *cobra.Command, args []string) {
+	var tries int
+	var span time.Duration
+	var err error
+	ethkey := make([]byte, 32)
+	if len(privhex) > 1 {
 
-	pass, err := common.SetPassword("Password for the keyfile:")
-	if err != nil {
-		fmt.Println(err)
-		return
+		ethkey = common.Pad(privhex, 32)
+
+	} else {
+		//Generate the Koblitz private key
+		ethkey, err, tries, span = common.TimeConstraindedVanityKey(vanity, caseSensitive, timeout)
+		if err != nil {
+			return
+		}
+		if len(vanity) > 0 {
+			fmt.Printf("Generated in %v tries within %v \n", tries, span)
+		}
+	}
+	uid := common.NewUuid()
+	addrTxt := common.CRCAddressFromPub(common.Scalar2Pub(ethkey))
+	if split {
+		genFilename, _ = strings.CutSuffix(genFilename, ".json")
+		common.SplitBytesToFiles(ethkey, genFilename, numshares, threshold, encalg, kdf,
+			"File contains a shard of a key for "+addrTxt)
+	} else {
+		kf, err := common.WrapSecret(genFilename, uid.String(), ethkey, encalg, kdf, addrTxt)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		err = common.WriteKeyfile(kf, "")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Printf("Keyfile written to %s\n", kf.Filename)
 	}
 
-	kf, err, tries, span := common.GenerateAndWrapNewKey(pass, kdf, encalg, privhex, vanity, caseSensitive, timeout)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	kf.Hint, err = common.GetPasswordHint()
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	fmt.Printf("Public key: %s\n", kf.PubKey)
-	fmt.Printf("Address: %s\n", kf.Address)
-	common.WriteKeyfile(kf, genFilename)
-	fmt.Printf("Written to the file: '%s'\n", kf.Filename)
-	if len(vanity) > 0 {
-		fmt.Printf("Generated in %v tries within %v \n", tries, span)
-	}
 }
 
 func init() {
