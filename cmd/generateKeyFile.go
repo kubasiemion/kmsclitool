@@ -25,6 +25,7 @@ func generateKeyFile(cmd *cobra.Command, args []string) {
 	var tries int
 	var span time.Duration
 	var err error
+	var addr string
 	ethkey := make([]byte, 32)
 	if len(privhex) > 1 {
 
@@ -32,12 +33,12 @@ func generateKeyFile(cmd *cobra.Command, args []string) {
 
 	} else {
 		//Generate the Koblitz private key
-		ethkey, err, tries, span = common.TimeConstraindedVanityKey(vanity, caseSensitive, timeout)
+		ethkey, addr, err, tries, span = common.TimeConstraindedVanityKey(vanity, caseSensitive, timeout)
 		if err != nil {
 			return
 		}
 		if len(vanity) > 0 {
-			fmt.Printf("Generated in %v tries within %v \n", tries, span)
+			fmt.Printf("Vanity address %s found in %v tries within %v \n", addr, tries, span)
 		}
 	}
 	uid := common.NewUuid()

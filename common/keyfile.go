@@ -5,8 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"strings"
-	"time"
 
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
@@ -63,38 +61,6 @@ func Keccak256(data ...[]byte) []byte {
 		d.Write(b)
 	}
 	return d.Sum(nil)
-}
-
-func GenerateAndWrapNewKey(pass []byte, kdf string, encalg string, priv []byte, vanity string, caseSensitive bool, timeout int) (kf *Keyfile, err error, tries int, span time.Duration) {
-	kf = &Keyfile{}
-
-	kf.Crypto.Kdf = kdf
-	kf.Crypto.Cipher = strings.ToLower(encalg)
-	kf.ID = NewUuid().String()
-	ethkey := make([]byte, 32)
-	if len(priv) > 1 {
-
-		ethkey = Pad(priv, 32)
-
-	} else {
-		//Generate the Koblitz private key
-		ethkey, err, tries, span = TimeConstraindedVanityKey(vanity, caseSensitive, timeout)
-		if err != nil {
-			return
-		}
-	}
-
-	err = EncryptAES(kf, ethkey, pass)
-	if err != nil {
-		return
-	}
-
-	pubkeyeth := Scalar2Pub(ethkey)
-	addr := CRCAddressFromPub(pubkeyeth)
-	kf.PubKey = hex.EncodeToString(pubkeyeth)
-	kf.Address = addr
-
-	return
 }
 
 func (keyfile *Keyfile) VerifyMAC(key []byte) error {

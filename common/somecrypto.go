@@ -231,13 +231,15 @@ func AddressFromPub(pubkeyeth []byte) []byte {
 
 type vanityResult struct {
 	key   []byte
+	addr  string
 	err   error
 	tries int
 }
 
-func GenerateVanityKey(vanity string, caseSensitive bool) vanityResult {
+func GenerateVanityKey(vanity string, caseSensitive bool, done *bool) vanityResult {
 	i := 1
 	key := make([]byte, 32)
+	var addr string
 	rand.Read(key)
 	if len(vanity) > 0 {
 		var af func(k []byte) (a string)
@@ -254,34 +256,45 @@ func GenerateVanityKey(vanity string, caseSensitive bool) vanityResult {
 		if err != nil {
 			return vanityResult{err: err}
 		}
-		for len(rx.FindString(af(key))) == 0 {
+		for len(rx.FindString(addr)) == 0 {
+			if *done {
+				return vanityResult{err: fmt.Errorf("Interrupted")}
+			}
 			i++
-			rand.Read(key)
 
+			for j := 0; j < 32; j++ {
+				key[j]++
+				if key[j] != 0 {
+					break
+				}
+			}
+			addr = af(key)
 			//fmt.Println(a)
 		}
 	}
+	return vanityResult{key, addr, nil, i}
 
-	return vanityResult{key, nil, i}
 }
 
-func TimeConstraindedVanityKey(vanity string, caseSensitive bool, timeout int) ([]byte, error, int, time.Duration) {
+func TimeConstraindedVanityKey(vanity string, caseSensitive bool, timeout int) ([]byte, string, error, int, time.Duration) {
 	start := time.Now()
 	result := make(chan vanityResult, 1)
 	Workers := runtime.NumCPU()
 	runtime.GOMAXPROCS(Workers)
-
+	done := false
 	for i := Workers; i > 0; i-- {
 		go func() {
-			result <- GenerateVanityKey(vanity, caseSensitive)
+			result <- GenerateVanityKey(vanity, caseSensitive, &done)
 		}()
 	}
-
 	select {
 	case <-time.After(time.Duration(timeout) * time.Second):
-		return nil, fmt.Errorf("Timeout after %v seconds", timeout), 0, time.Since(start)
+		fmt.Println("Timeout")
+		done = true
+		return nil, "", fmt.Errorf("Timeout after %v seconds", timeout), 0, time.Since(start)
 	case result := <-result:
-		return result.key, nil, result.tries * runtime.NumCPU(), time.Since(start)
+		done = true
+		return result.key, result.addr, nil, result.tries * runtime.NumCPU(), time.Since(start)
 	}
 
 }
