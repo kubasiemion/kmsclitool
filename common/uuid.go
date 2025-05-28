@@ -6,13 +6,34 @@ import (
 	"github.com/google/uuid"
 )
 
+const BIP32 = "BIP32"
+const SHARE = "SHARE"
+
+var reservedPrefixes = []string{BIP32, SHARE} // Reserved prefixes
+
 type Uuid struct {
 	root uuid.UUID
 	seq  int32
 }
 
+func isPlain(id uuid.UUID) bool {
+	if id == uuid.Nil {
+		return false
+	}
+	for _, p := range reservedPrefixes {
+		if id.String()[:len(p)] == p {
+			return false
+		}
+	}
+	return true
+}
+
 func NewUuid() *Uuid {
-	return &Uuid{uuid.New(), 0}
+	uid := uuid.Nil
+	for !isPlain(uid) {
+		uid = uuid.New()
+	}
+	return &Uuid{uid, 0}
 }
 
 func (u *Uuid) String() string {
@@ -47,7 +68,7 @@ func (u *Uuid) NthUuidString(n int, nbytes int) string {
 }
 
 // Returns a string with n leading X characters
-func (u *Uuid) GetPattern(n int) string {
+func (u *Uuid) GetWithLeadingX(n int) string {
 	if n > 8 {
 		fmt.Println("Warning: GetPattern only supports up to 8 leading X characters")
 		n = 8
@@ -61,4 +82,17 @@ func (u *Uuid) GetPattern(n int) string {
 
 	}
 	return string(b)
+}
+
+// Returns a string with n leading prefix characters
+// The prefix must be plain ASCII
+func (u *Uuid) GetWithPattern(pat string) string {
+	if len(pat) > 8 {
+		fmt.Println("Warning: GetWithPattern only supports up to 8 leading X characters")
+		pat = pat[:8]
+	}
+
+	s := u.String()
+	s = pat + s[len(pat):]
+	return s
 }

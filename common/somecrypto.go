@@ -9,12 +9,10 @@ import (
 	"fmt"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v2"
-	"github.com/tyler-smith/go-bip32"
 )
 
 func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
@@ -332,57 +330,6 @@ func ParseHexString(hexstring string) ([]byte, error) {
 	}
 
 	return hex.DecodeString(hexstring)
-}
-
-// Create bip32 key (root) from eth key and additional entropy (chaincode)
-func RootKeyFromKey(key, chainCode []byte) (*bip32.Key, error) {
-	// Create the key struct
-	rkey := &bip32.Key{
-		Version:     bip32.PrivateWalletVersion,
-		ChainCode:   chainCode,
-		Key:         key,
-		Depth:       0x0,
-		ChildNumber: []byte{0x00, 0x00, 0x00, 0x00},
-		FingerPrint: []byte{0x00, 0x00, 0x00, 0x00},
-		IsPrivate:   true,
-	}
-
-	return rkey, nil
-}
-
-// Derive child key from parent key according to path (bip32)
-func DeriveChildKey(key *bip32.Key, path []uint32) (*bip32.Key, error) {
-	for _, i := range path {
-		ckey, err := key.NewChildKey(i)
-		if err != nil {
-			return nil, err
-		}
-		key = ckey
-
-	}
-	return key, nil
-}
-
-var childfinder = regexp.MustCompile(`[0-9a-fA-F]+[']*`)
-
-// Translate bop32 path to uint32 array
-func PathToUint32(path string) ([]uint32, error) {
-	var patharr []uint32
-	steps := childfinder.FindAllString(path, -1)
-
-	for _, step := range steps {
-		var offset uint32 = 0x00000000
-		if step[len(step)-1] == '\'' {
-			step = step[:len(step)-1]
-			offset = 0x80000000
-		}
-		i, err := strconv.ParseUint(step, 16, 32)
-		if err != nil {
-			return nil, err
-		}
-		patharr = append(patharr, uint32(i)+offset)
-	}
-	return patharr, nil
 }
 
 type KdfScryptparams struct {

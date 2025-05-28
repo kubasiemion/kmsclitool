@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tyler-smith/go-bip32"
+	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 	"golang.org/x/crypto/sha3"
@@ -20,8 +22,9 @@ type Keyfile struct {
 	ID      string `json:"id"`
 	Address string `json:"address"`
 	Crypto  struct {
-		Ciphertext   string `json:"ciphertext"`
-		Cipherparams struct {
+		Ciphertext         string `json:"ciphertext"`
+		ExtendedCiphertext string `json:"extendedciphertext,omitempty"`
+		Cipherparams       struct {
 			Iv string `json:"iv"`
 		} `json:"cipherparams"`
 		Cipher          string          `json:"cipher"`
@@ -32,6 +35,8 @@ type Keyfile struct {
 		Mac             string          `json:"mac"`
 	} `json:"crypto"`
 	Plaintext []byte `json:"-"`
+	PrivKey   []byte `json:"-"`
+	ChainCode []byte `json:"-"`
 	PubKey    string `json:"-"`
 	Hint      string `json:"hint,omitempty"`
 	Filename  string `json:"-"`
@@ -127,6 +132,17 @@ func (kf *Keyfile) Decrypt(pass []byte) (err error) {
 		return
 	}
 	kf.Plaintext, err = Decrypt(kf, key)
+	if strings.HasPrefix(kf.ID, BIP32) {
+		bip32Key, err := bip32.Deserialize(kf.Plaintext)
+		if err != nil {
+			return err
+		}
+		kf.PrivKey = bip32Key.Key
+		kf.ChainCode = bip32Key.ChainCode
+	} else {
+		kf.PrivKey = kf.Plaintext
+	}
+
 	return
 }
 
@@ -177,5 +193,52 @@ func GenerateAndWrapNewKey(pass []byte, kdf string, encalg string, priv []byte, 
 	kf.PubKey = hex.EncodeToString(pubkeyeth)
 	kf.Address = addr
 
+	return
+}
+
+// Not exactly compliant with BIP39
+func (kf *Keyfile) GetPrivAsMnemonic() (mnemonic string, err error) {
+	if len(kf.Plaintext) == 0 {
+		err = fmt.Errorf("No private key to convert to mnemonic")
+		return
+	}
+	mnemonic, err = bip39.NewMnemonic(kf.Plaintext)
+
+	return
+}
+
+func BIP32KeyFromMnemonic(mnemonic, password, keypass string, derpath ...uint32) (kf *Keyfile, err error) {
+
+	seed, err := bip39.NewSeedWithErrorChecking(mnemonic, password)
+	if err != nil {
+		return
+	}
+	var masterKey *bip32.Key
+	masterKey, err = bip32.NewMasterKey(seed)
+	if err != nil {
+		return
+	}
+
+	if len(derpath) > 0 {
+		masterKey, err = DeriveChildKey(masterKey, derpath)
+		if err != nil {
+			return
+		}
+	}
+
+	keyser, err := masterKey.Serialize()
+	if err != nil {
+		return
+	}
+	addr := CRCAddressFromPub(Scalar2Pub(masterKey.Key))
+	kps := []string{}
+	if len(keypass) > 0 {
+		kps = append(kps, keypass)
+	}
+
+	kf, err = WrapSecret("", NewUuid().GetWithPattern(BIP32), keyser, "aes-128-ctr", "scrypt", addr, kps...)
+	if err != nil {
+		return
+	}
 	return
 }

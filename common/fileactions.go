@@ -171,16 +171,23 @@ func WrapNSecrets(filenameptrn string, idptrn *Uuid, plaintexts [][]byte, encalg
 	return kfs, nil
 }
 
-func WrapSecret(filename string, id string, plaintext []byte, encalg, kdf, addressText string) (*Keyfile, error) {
+func WrapSecret(filename string, id string, plaintext []byte, encalg, kdf, addressText string, dpass ...string) (*Keyfile, error) {
 	keyf := &Keyfile{}
 	keyf.Plaintext = plaintext
 	keyf.ID = id
 	keyf.Crypto.Cipher = encalg
 	keyf.Crypto.Kdf = kdf
-	pass, err := SetPassword(fmt.Sprintf("Password for %s:", filename))
-	if err != nil {
-		return nil, err
+	var pass []byte
+	var err error
+	if len(dpass) > 0 {
+		pass = []byte(dpass[0])
+	} else {
+		pass, err = SetPassword(fmt.Sprintf("Password for %s:", filename))
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	keyf.Hint, _ = GetPasswordHint()
 	keyf.Address = addressText
 	if err != nil {

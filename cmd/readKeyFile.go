@@ -53,11 +53,14 @@ func DisplayKeyFile(kf *common.Keyfile, verbose bool) {
 		return
 	}
 
-	prv, pubkeyec := secp256k1.PrivKeyFromBytes(kf.Plaintext)
+	prv, pubkeyec := secp256k1.PrivKeyFromBytes(kf.PrivKey)
 	pubkeyeth := append(pubkeyec.X.Bytes(), pubkeyec.Y.Bytes()...)
 	fmt.Printf("Public key: \t%s\n", hex.EncodeToString(pubkeyeth))
 	if verbose {
-		fmt.Printf("Private key: \t%s\n", hex.EncodeToString(kf.Plaintext))
+		fmt.Printf("Private key: \t%s\n", hex.EncodeToString(kf.PrivKey))
+		if len(kf.ChainCode) > 0 {
+			fmt.Printf("Chain code: \t%s\n", hex.EncodeToString(kf.ChainCode))
+		}
 		fmt.Println("D:", prv.D)
 		fmt.Println("X:", pubkeyec.X)
 		fmt.Println("Y:", pubkeyec.Y)
