@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -13,9 +14,10 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v2"
+	"golang.org/x/sync/errgroup"
 )
 
-func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
+func EncryptAES(kf *Keyfile, plaintext []byte, password []byte, niter int) error {
 	//Handle KDF
 
 	salt := make([]byte, 16)
@@ -33,7 +35,7 @@ func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
 	switch kf.Crypto.Kdf {
 	case "scrypt":
 
-		kf.Crypto.KdfScryptParams = *StdScryptParams()
+		kf.Crypto.KdfScryptParams = *StdScryptParams(niter)
 		kf.Crypto.KdfScryptParams.Salt = hex.EncodeToString(salt)
 		key, err = KeyFromPassScrypt(password, kf.Crypto.KdfScryptParams)
 		if err != nil {
@@ -43,7 +45,7 @@ func EncryptAES(kf *Keyfile, plaintext []byte, password []byte) error {
 
 	case "pbkdf2":
 
-		kf.Crypto.KdfPbkdf2params = *StdPbkdf2Params()
+		kf.Crypto.KdfPbkdf2params = *StdPbkdf2Params(niter)
 		kf.Crypto.KdfPbkdf2params.Salt = hex.EncodeToString(salt)
 		key, err = KeyFromPassPbkdf2(password, kf.Crypto.KdfPbkdf2params)
 		if err != nil {
@@ -228,21 +230,20 @@ func AddressFromPub(pubkeyeth []byte) []byte {
 }
 
 type vanityResult struct {
+	wid   int
 	key   []byte
 	addr  string
-	err   error
 	tries int
 }
 
-func GenerateVanityKey(vanity string, caseSensitive bool, done *bool) vanityResult {
+func GenerateVanityKey(vanity *regexp.Regexp, caseSensitive bool, workerid int, resultChannel chan vanityResult, ctx context.Context) error {
 	i := 1
 	key := make([]byte, 32)
 	var addr string
 	rand.Read(key)
-	if len(vanity) > 0 {
+	if vanity != nil {
 		var af func(k []byte) (a string)
 		if !caseSensitive {
-			vanity = strings.ToLower(vanity)
 			af = func(k []byte) string {
 				a := hex.EncodeToString(AddressFromPub(Scalar2Pub(k)))
 				return a
@@ -250,51 +251,89 @@ func GenerateVanityKey(vanity string, caseSensitive bool, done *bool) vanityResu
 		} else {
 			af = func(k []byte) string { a := CRCAddressFromPub(Scalar2Pub(key)); return a[2:] }
 		}
-		rx, err := regexp.Compile(vanity)
-		if err != nil {
-			return vanityResult{err: err}
-		}
-		for len(rx.FindString(addr)) == 0 {
-			if *done {
-				return vanityResult{err: fmt.Errorf("Interrupted")}
-			}
-			i++
+		for {
+			select {
+			case <-ctx.Done():
+				resultChannel <- vanityResult{tries: i, wid: workerid}
+				return ctx.Err()
 
-			for j := 0; j < 32; j++ {
-				key[j]++
-				if key[j] != 0 {
-					break
+			default:
+
+				i++
+
+				for j := 0; j < 32; j++ {
+					key[j]++
+					if key[j] != 0 {
+						break
+					}
 				}
+				addr = af(key)
+
 			}
-			addr = af(key)
-			//fmt.Println(a)
+			if len(vanity.FindString(addr)) > 0 {
+				break
+			}
 		}
 	}
-	return vanityResult{key, addr, nil, i}
+	resultChannel <- vanityResult{workerid, key, addr, i}
+	return fmt.Errorf("Got it")
 
 }
 
-func TimeConstraindedVanityKey(vanity string, caseSensitive bool, timeout int) ([]byte, string, error, int, time.Duration) {
+func TimeConstraindedVanityKey(vanity string, caseSensitive bool, timeout int) (key []byte, addr string, totalit int, timespan time.Duration, err error) {
 	start := time.Now()
-	result := make(chan vanityResult, 1)
-	Workers := runtime.NumCPU()
-	runtime.GOMAXPROCS(Workers)
-	done := false
-	for i := Workers; i > 0; i-- {
-		go func() {
-			result <- GenerateVanityKey(vanity, caseSensitive, &done)
-		}()
+	defer func() { timespan = time.Since(start) }()
+	workerCount := 1
+	var vanityrx *regexp.Regexp
+	if len(vanity) > 0 {
+		if !caseSensitive {
+			vanity = strings.ToLower(vanity)
+		}
+		vanityrx, err = regexp.Compile(vanity)
+		if err != nil {
+			return
+		}
+		workerCount = runtime.NumCPU()
+		fmt.Printf("looking for a wallet with vanity pattern: %s\n", vanity)
+		fmt.Printf("Spanning %v worker(-s)\n", workerCount)
+		fmt.Printf("Timout is set to %v sec\n", timeout)
+
+	}
+
+	resultChannel := make(chan vanityResult, workerCount)
+	runtime.GOMAXPROCS(workerCount)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+	defer cancel()
+	ewg, ctxg := errgroup.WithContext(ctx)
+	for i := workerCount; i > 0; i-- {
+		j := i
+		ewg.Go(func() error {
+			return GenerateVanityKey(vanityrx, caseSensitive, j, resultChannel, ctxg)
+		})
 	}
 	select {
 	case <-time.After(time.Duration(timeout) * time.Second):
 		fmt.Println("Timeout")
-		done = true
-		return nil, "", fmt.Errorf("Timeout after %v seconds", timeout), 0, time.Since(start)
-	case result := <-result:
-		done = true
-		return result.key, result.addr, nil, result.tries * runtime.NumCPU(), time.Since(start)
+
+		return
+		//case <-ctxg.Done():
+
+	case result := <-resultChannel:
+		key = result.key
+		addr = result.addr
+		totalit = result.tries
+
+	}
+	ewg.Wait()
+	close(resultChannel)
+	for res := range resultChannel {
+		totalit += res.tries
+	}
+	if len(addr) == 0 {
+		addr = CRCAddressFromPub(Scalar2Pub(key))
 	}
 
+	return
 }
 
 func CalcCREATEAddress(address []byte, nonce uint) ([]byte, error) {
@@ -347,12 +386,18 @@ type KdfPbkdf2params struct {
 	Salt  string `json:"salt"`
 }
 
-// function returning stadard scryp parameters as KdfScryptparams struct
-func StdScryptParams() *KdfScryptparams {
-	return &KdfScryptparams{Dklen: 32, N: 131072, P: 1, R: 8}
+// function returning stadard scryp parameters as KdfScrytime.Since(start)
+func StdScryptParams(n int) *KdfScryptparams {
+	if n == 0 {
+		n = 1 << 20
+	}
+	return &KdfScryptparams{Dklen: 32, N: n, P: 1, R: 8}
 }
 
 // function returning stadard pbkdf2 parameters as KdfPbkdf2params struct
-func StdPbkdf2Params() *KdfPbkdf2params {
-	return &KdfPbkdf2params{C: 262144, Dklen: 32, Prf: "hmac-sha256"}
+func StdPbkdf2Params(c int) *KdfPbkdf2params {
+	if c == 0 {
+		c = 3 * 262144
+	}
+	return &KdfPbkdf2params{C: c, Dklen: 32, Prf: "hmac-sha256"}
 }

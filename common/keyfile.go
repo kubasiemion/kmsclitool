@@ -177,13 +177,14 @@ func GenerateAndWrapNewKey(pass []byte, kdf string, encalg string, priv []byte, 
 
 	} else {
 		//Generate the Koblitz private key
-		ethkey, _, err, tries, span = TimeConstraindedVanityKey(vanity, caseSensitive, timeout)
+		ethkey, _, tries, span, err = TimeConstraindedVanityKey(vanity, caseSensitive, timeout)
 		if err != nil {
 			return
 		}
 	}
+	fmt.Println("here1")
 
-	err = EncryptAES(kf, ethkey, pass)
+	err = EncryptAES(kf, ethkey, pass, 1<<20)
 	if err != nil {
 		return
 	}
@@ -236,7 +237,7 @@ func BIP32KeyFromMnemonic(mnemonic, password, keypass string, derpath ...uint32)
 		kps = append(kps, keypass)
 	}
 
-	kf, err = WrapSecret("", NewUuid().GetWithPattern(BIP32), keyser, "aes-128-ctr", "scrypt", addr, kps...)
+	kf, err = WrapSecret("", NewUuid().GetWithPattern(BIP32), keyser, "aes-128-ctr", "scrypt", addr, 0, kps...)
 	if err != nil {
 		return
 	}

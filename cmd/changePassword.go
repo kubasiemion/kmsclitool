@@ -45,7 +45,7 @@ func changePassword(cmd *cobra.Command, args []string) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	common.EncryptAES(kf, kf.Plaintext, pass)
+	common.EncryptAES(kf, kf.Plaintext, pass, 0<<20)
 	common.WriteKeyfile(kf, outfile)
 
 }

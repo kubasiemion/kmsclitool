@@ -31,7 +31,7 @@ func TestEncryptCTR(t *testing.T) {
 	keyf.Crypto.Kdf = "scrypt"
 	password := []byte("password")
 	plaintext := []byte("plaintext")
-	EncryptAES(keyf, plaintext, password)
+	EncryptAES(keyf, plaintext, password, 0)
 
 	fmt.Println(keyf.Crypto.Ciphertext)
 
@@ -46,7 +46,7 @@ func TestEncryptCTR(t *testing.T) {
 	}
 
 	keyf.Crypto.Cipher = "aes-128-ctr"
-	EncryptAES(keyf, plaintext, password)
+	EncryptAES(keyf, plaintext, password, 0)
 	err = keyf.Decrypt(password)
 	if err != nil {
 		t.Error(err)
@@ -58,7 +58,7 @@ func TestEncryptCTR(t *testing.T) {
 	}
 
 	keyf.Crypto.Cipher = "aes-256-gcm"
-	EncryptAES(keyf, plaintext, password)
+	EncryptAES(keyf, plaintext, password, 0)
 	fmt.Println(keyf.Crypto.Ciphertext)
 
 	err = keyf.Decrypt(password)
@@ -72,7 +72,7 @@ func TestEncryptCTR(t *testing.T) {
 	}
 
 	keyf.Crypto.Cipher = "aes-128-gcm"
-	EncryptAES(keyf, plaintext, password)
+	EncryptAES(keyf, plaintext, password, 0)
 	fmt.Println(keyf.Crypto.Ciphertext)
 
 	err = keyf.Decrypt(password)
@@ -125,4 +125,15 @@ func TestDerive(t *testing.T) {
 	fmt.Println(rkey)
 	fmt.Println(ckey, hex.EncodeToString(ckey.Key), hex.EncodeToString(ckey.ChainCode), ckey.Depth, ckey.ChildNumber, ckey.FingerPrint, ckey.Version)
 
+}
+
+func TestVanity(t *testing.T) {
+	//vanity := "^B00B5"
+	var vanity = ""
+	key, addr, _, _, err := TimeConstraindedVanityKey(vanity, false, 200)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(addr)
+	fmt.Printf("0x%x\n", key)
 }

@@ -10,12 +10,11 @@ require (
 )
 
 require (
-	github.com/btcsuite/btcd v0.23.5-0.20231215221805-96c9fd8078fd
-	github.com/btcsuite/btcd/btcutil v1.1.5
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/proveniencenft/primesecrets v0.1.0
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/tyler-smith/go-bip39 v1.1.0
+	golang.org/x/sync v0.5.0
 )
 
 require (

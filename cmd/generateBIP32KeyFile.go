@@ -50,7 +50,7 @@ func generateBIP32KeyFile(cmd *cobra.Command, args []string) {
 		common.SplitBytesToFiles(keyser, genFilename, numshares, threshold, encalg, kdf,
 			"File contains a shard of a key for "+addr)
 	} else {
-		kf, err := common.WrapSecret(genFilename, uid.GetWithPattern(common.BIP32), keyser, encalg, kdf, addr)
+		kf, err := common.WrapSecret(genFilename, uid.GetWithPattern(common.BIP32), keyser, encalg, kdf, addr, 0)
 		if err != nil {
 			fmt.Println(err)
 			return

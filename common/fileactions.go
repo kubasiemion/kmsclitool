@@ -162,7 +162,7 @@ func WrapNSecrets(filenameptrn string, idptrn *Uuid, plaintexts [][]byte, encalg
 	for i, sec := range plaintexts {
 		filename := fmt.Sprintf("%s%02x.json", filenameptrn, i)
 		id := idptrn.Next()
-		kfs[i], err = WrapSecret(filename, id, sec, encalg, kdf, addressTextPtrn)
+		kfs[i], err = WrapSecret(filename, id, sec, encalg, kdf, addressTextPtrn, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -171,7 +171,7 @@ func WrapNSecrets(filenameptrn string, idptrn *Uuid, plaintexts [][]byte, encalg
 	return kfs, nil
 }
 
-func WrapSecret(filename string, id string, plaintext []byte, encalg, kdf, addressText string, dpass ...string) (*Keyfile, error) {
+func WrapSecret(filename string, id string, plaintext []byte, encalg, kdf, addressText string, kdfiter int, dpass ...string) (*Keyfile, error) {
 	keyf := &Keyfile{}
 	keyf.Plaintext = plaintext
 	keyf.ID = id
@@ -182,7 +182,11 @@ func WrapSecret(filename string, id string, plaintext []byte, encalg, kdf, addre
 	if len(dpass) > 0 {
 		pass = []byte(dpass[0])
 	} else {
-		pass, err = SetPassword(fmt.Sprintf("Password for %s:", filename))
+		label := filename
+		if len(label) == 0 {
+			label = addressText
+		}
+		pass, err = SetPassword(fmt.Sprintf("Password for %s:", label))
 		if err != nil {
 			return nil, err
 		}
@@ -193,7 +197,7 @@ func WrapSecret(filename string, id string, plaintext []byte, encalg, kdf, addre
 	if err != nil {
 		return nil, err
 	}
-	err = EncryptAES(keyf, plaintext, pass)
+	err = EncryptAES(keyf, plaintext, pass, kdfiter)
 	if err != nil {
 		return nil, err
 	}
