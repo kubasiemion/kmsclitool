@@ -1,6 +1,7 @@
 package common
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
+	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 	"golang.org/x/crypto/sha3"
@@ -30,8 +32,9 @@ type Keyfile struct {
 		Cipher          string          `json:"cipher"`
 		Kdf             string          `json:"kdf"`
 		KdfparamsPack   json.RawMessage `json:"kdfparams,omitempty"`
-		KdfScryptParams KdfScryptparams `json:"-"`
-		KdfPbkdf2params KdfPbkdf2params `json:"-"`
+		KdfScryptParams ScryptParams    `json:"-"`
+		KdfPbkdf2params Pbkdf2Params    `json:"-"`
+		ArgonParams     ArgonParams     `json:"-"`
 		Mac             string          `json:"mac"`
 	} `json:"crypto"`
 	Plaintext []byte `json:"-"`
@@ -43,7 +46,7 @@ type Keyfile struct {
 }
 
 // Recoveres the encryption key from password
-func KeyFromPassScrypt(password []byte, params KdfScryptparams) ([]byte, error) {
+func KeyFromPassScrypt(password []byte, params ScryptParams) ([]byte, error) {
 	salt, err := hex.DecodeString(params.Salt)
 	if err != nil {
 		return nil, err
@@ -52,13 +55,22 @@ func KeyFromPassScrypt(password []byte, params KdfScryptparams) ([]byte, error) 
 }
 
 // Recoveres the encryption key from password
-func KeyFromPassPbkdf2(password []byte, params KdfPbkdf2params) ([]byte, error) {
+func KeyFromPassPbkdf2(password []byte, params Pbkdf2Params) ([]byte, error) {
 	salt, err := hex.DecodeString(params.Salt)
 	if err != nil {
 		return nil, err
 	}
 	return pbkdf2.Key(password, salt, params.C, params.Dklen, sha256.New), nil
 
+}
+
+func KeyFromPassArgon(password []byte, params *ArgonParams) []byte {
+	if len(params.Salt) == 0 {
+		params.Salt = make([]byte, params.SaltLength)
+		rand.Read(params.Salt)
+	}
+	key := argon2.IDKey(password, params.Salt, params.Iterations, params.Memory, params.Parallelism, params.KeyLength)
+	return key
 }
 
 // Just a convenience wrapper copied from geth
@@ -98,6 +110,8 @@ func (keyfile *Keyfile) KeyFromPass(pass []byte) (key []byte, err error) {
 		if err != nil {
 			return
 		}
+	case "argon":
+		key = KeyFromPassArgon(pass, &keyfile.Crypto.ArgonParams)
 	default:
 		err = fmt.Errorf("Unsupported KDF: " + keyfile.Crypto.Kdf)
 		return
@@ -109,13 +123,17 @@ func (kf *Keyfile) UnmarshalKdfJSON() (err error) {
 
 	switch kf.Crypto.Kdf {
 	case "scrypt":
-		ksp := new(KdfScryptparams)
+		ksp := new(ScryptParams)
 		err = json.Unmarshal(kf.Crypto.KdfparamsPack, ksp)
 		kf.Crypto.KdfScryptParams = *ksp
 	case "pbkdf2":
-		kpb := new(KdfPbkdf2params)
+		kpb := new(Pbkdf2Params)
 		err = json.Unmarshal(kf.Crypto.KdfparamsPack, kpb)
 		kf.Crypto.KdfPbkdf2params = *kpb
+	case "argon":
+		kap := new(ArgonParams)
+		err = json.Unmarshal(kf.Crypto.KdfparamsPack, kap)
+		kf.Crypto.ArgonParams = *kap
 
 	}
 	return err

@@ -35,7 +35,7 @@ func EncryptAES(kf *Keyfile, plaintext []byte, password []byte, niter int) error
 	switch kf.Crypto.Kdf {
 	case "scrypt":
 
-		kf.Crypto.KdfScryptParams = *StdScryptParams(niter)
+		kf.Crypto.KdfScryptParams = *NewScryptParams(niter)
 		kf.Crypto.KdfScryptParams.Salt = hex.EncodeToString(salt)
 		key, err = KeyFromPassScrypt(password, kf.Crypto.KdfScryptParams)
 		if err != nil {
@@ -45,13 +45,18 @@ func EncryptAES(kf *Keyfile, plaintext []byte, password []byte, niter int) error
 
 	case "pbkdf2":
 
-		kf.Crypto.KdfPbkdf2params = *StdPbkdf2Params(niter)
+		kf.Crypto.KdfPbkdf2params = *NewPbkdf2Params(niter)
 		kf.Crypto.KdfPbkdf2params.Salt = hex.EncodeToString(salt)
 		key, err = KeyFromPassPbkdf2(password, kf.Crypto.KdfPbkdf2params)
 		if err != nil {
 			return err
 		}
 		scryptparams = &kf.Crypto.KdfPbkdf2params
+	case "argon":
+		kf.Crypto.ArgonParams = *NewArgonParams()
+		kf.Crypto.ArgonParams.Salt = salt
+		key = KeyFromPassArgon(password, &kf.Crypto.ArgonParams)
+		scryptparams = &kf.Crypto.ArgonParams
 	default:
 		return fmt.Errorf("Unsupported KDF scheme: %s", kf.Crypto.Kdf)
 
@@ -369,35 +374,4 @@ func ParseHexString(hexstring string) ([]byte, error) {
 	}
 
 	return hex.DecodeString(hexstring)
-}
-
-type KdfScryptparams struct {
-	Dklen int    `json:"dklen"`
-	Salt  string `json:"salt"`
-	N     int    `json:"n"`
-	R     int    `json:"r"`
-	P     int    `json:"p"`
-}
-
-type KdfPbkdf2params struct {
-	C     int    `json:"c"`
-	Dklen int    `json:"dklen"`
-	Prf   string `json:"prf"`
-	Salt  string `json:"salt"`
-}
-
-// function returning stadard scryp parameters as KdfScrytime.Since(start)
-func StdScryptParams(n int) *KdfScryptparams {
-	if n == 0 {
-		n = 1 << 20
-	}
-	return &KdfScryptparams{Dklen: 32, N: n, P: 1, R: 8}
-}
-
-// function returning stadard pbkdf2 parameters as KdfPbkdf2params struct
-func StdPbkdf2Params(c int) *KdfPbkdf2params {
-	if c == 0 {
-		c = 3 * 262144
-	}
-	return &KdfPbkdf2params{C: c, Dklen: 32, Prf: "hmac-sha256"}
 }
