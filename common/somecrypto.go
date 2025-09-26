@@ -33,32 +33,24 @@ func EncryptAES(kf *Keyfile, plaintext []byte, password []byte, niter int) error
 
 	switch kf.Crypto.Kdf {
 	case KdfScrypt:
-
 		params := *NewScryptParams(niter)
 		params.Salt = hex.EncodeToString(salt)
-		key, err = KeyFromPassScrypt(password, params)
-		if err != nil {
-			return err
-		}
 		kf.Crypto.Kdfparams = params
-
 	case KdfPbkdf2:
-
 		params := *NewPbkdf2Params(niter)
 		params.Salt = hex.EncodeToString(salt)
-		key, err = KeyFromPassPbkdf2(password, params)
-		if err != nil {
-			return err
-		}
 		kf.Crypto.Kdfparams = params
 	case KdfArgon:
 		params := NewArgonParams()
-		params.Salt = salt
-		key = KeyFromPassArgon(password, params)
+		params.SetSalt(16)
 		kf.Crypto.Kdfparams = params
 	default:
 		return fmt.Errorf("Unsupported KDF scheme: %s", kf.Crypto.Kdf)
 
+	}
+	key, err = kf.KeyFromPass(password)
+	if err != nil {
+		return err
 	}
 
 	//Letsencrypt

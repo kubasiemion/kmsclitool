@@ -1,8 +1,6 @@
 package common
 
 import (
-	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -13,9 +11,6 @@ import (
 	"github.com/decred/dcrd/dcrec/secp256k1/v2"
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
-	"golang.org/x/crypto/argon2"
-	"golang.org/x/crypto/pbkdf2"
-	"golang.org/x/crypto/scrypt"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -44,32 +39,11 @@ type Keyfile struct {
 	Filename  string `json:"-"`
 }
 
-// Recoveres the encryption key from password
-func KeyFromPassScrypt(password []byte, params ScryptParams) ([]byte, error) {
-	salt, err := hex.DecodeString(params.Salt)
-	if err != nil {
-		return nil, err
-	}
-	return scrypt.Key(password, salt, params.N, params.R, params.P, params.Dklen)
-}
-
-// Recoveres the encryption key from password
-func KeyFromPassPbkdf2(password []byte, params Pbkdf2Params) ([]byte, error) {
-	salt, err := hex.DecodeString(params.Salt)
-	if err != nil {
-		return nil, err
-	}
-	return pbkdf2.Key(password, salt, params.C, params.Dklen, sha256.New), nil
-
-}
-
-func KeyFromPassArgon(password []byte, params *ArgonParams) []byte {
-	if len(params.Salt) == 0 {
-		params.Salt = make([]byte, params.SaltLength)
-		rand.Read(params.Salt)
-	}
-	key := argon2.IDKey(password, params.Salt, params.Iterations, params.Memory, params.Parallelism, params.KeyLength)
-	return key
+func (kf *Keyfile) KdfInterface() *Kdf {
+	kdf := new(Kdf)
+	kdf.Name = kf.Crypto.Kdf
+	kdf.Params = kf.Crypto.Kdfparams
+	return kdf
 }
 
 // Just a convenience wrapper copied from geth
@@ -97,39 +71,45 @@ func (keyfile *Keyfile) VerifyMAC(key []byte) error {
 }
 
 func (keyfile *Keyfile) KeyFromPass(pass []byte) (key []byte, err error) {
-	switch keyfile.Crypto.Kdf {
-	case KdfScrypt:
-		params, ok := keyfile.Crypto.Kdfparams.(ScryptParams)
-		if !ok {
-			err = fmt.Errorf("Wrong script params")
-			return
-		}
-		key, err = KeyFromPassScrypt(pass, params)
-		if err != nil {
-			return
-		}
+	return keyfile.KdfInterface().KeyFromPass(pass)
+	/*
+		switch keyfile.Crypto.Kdf {
 
-	case KdfPbkdf2:
-		params, ok := keyfile.Crypto.Kdfparams.(Pbkdf2Params)
-		if !ok {
-			err = fmt.Errorf("Wrong script params")
+
+		case KdfScrypt:
+			params, ok := keyfile.Crypto.Kdfparams.(ScryptParams)
+			if !ok {
+				err = fmt.Errorf("Wrong script params")
+				return
+			}
+			key, err = KeyFromPassScrypt(pass, params)
+			if err != nil {
+				return
+			}
+
+		case KdfPbkdf2:
+			params, ok := keyfile.Crypto.Kdfparams.(Pbkdf2Params)
+			if !ok {
+				err = fmt.Errorf("Wrong script params")
+				return
+			}
+			key, err = KeyFromPassPbkdf2(pass, params)
+			if err != nil {
+				return
+			}
+		case KdfArgon:
+			params, ok := keyfile.Crypto.Kdfparams.(ArgonParams)
+			if !ok {
+				err = fmt.Errorf("Wrong script params")
+				return
+			}
+			key, _ = KeyFromPassArgon(pass, &params)
+
+		default:
+			err = fmt.Errorf("Unsupported KDF: %s", keyfile.Crypto.Kdf)
 			return
 		}
-		key, err = KeyFromPassPbkdf2(pass, params)
-		if err != nil {
-			return
-		}
-	case KdfArgon:
-		params, ok := keyfile.Crypto.Kdfparams.(ArgonParams)
-		if !ok {
-			err = fmt.Errorf("Wrong script params")
-			return
-		}
-		key = KeyFromPassArgon(pass, &params)
-	default:
-		err = fmt.Errorf("Unsupported KDF: %s", keyfile.Crypto.Kdf)
-		return
-	}
+	*/
 	return
 }
 
