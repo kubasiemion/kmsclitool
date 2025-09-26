@@ -28,7 +28,7 @@ func TestEncryptCTR(t *testing.T) {
 
 	keyf := &Keyfile{}
 	keyf.Crypto.Cipher = "aes-128-ctr"
-	keyf.Crypto.Kdf = "scrypt"
+	keyf.Crypto.Kdf = KdfScrypt
 	password := []byte("password")
 	plaintext := []byte("plaintext")
 	EncryptAES(keyf, plaintext, password, 0)

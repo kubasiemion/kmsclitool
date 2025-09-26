@@ -6,7 +6,6 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"runtime"
@@ -31,32 +30,32 @@ func EncryptAES(kf *Keyfile, plaintext []byte, password []byte, niter int) error
 	*/
 	var key []byte
 	var err error
-	var scryptparams interface{}
+
 	switch kf.Crypto.Kdf {
-	case "scrypt":
+	case KdfScrypt:
 
-		kf.Crypto.KdfScryptParams = *NewScryptParams(niter)
-		kf.Crypto.KdfScryptParams.Salt = hex.EncodeToString(salt)
-		key, err = KeyFromPassScrypt(password, kf.Crypto.KdfScryptParams)
+		params := *NewScryptParams(niter)
+		params.Salt = hex.EncodeToString(salt)
+		key, err = KeyFromPassScrypt(password, params)
 		if err != nil {
 			return err
 		}
-		scryptparams = &kf.Crypto.KdfScryptParams
+		kf.Crypto.Kdfparams = params
 
-	case "pbkdf2":
+	case KdfPbkdf2:
 
-		kf.Crypto.KdfPbkdf2params = *NewPbkdf2Params(niter)
-		kf.Crypto.KdfPbkdf2params.Salt = hex.EncodeToString(salt)
-		key, err = KeyFromPassPbkdf2(password, kf.Crypto.KdfPbkdf2params)
+		params := *NewPbkdf2Params(niter)
+		params.Salt = hex.EncodeToString(salt)
+		key, err = KeyFromPassPbkdf2(password, params)
 		if err != nil {
 			return err
 		}
-		scryptparams = &kf.Crypto.KdfPbkdf2params
-	case "argon":
-		kf.Crypto.ArgonParams = *NewArgonParams()
-		kf.Crypto.ArgonParams.Salt = salt
-		key = KeyFromPassArgon(password, &kf.Crypto.ArgonParams)
-		scryptparams = &kf.Crypto.ArgonParams
+		kf.Crypto.Kdfparams = params
+	case KdfArgon:
+		params := NewArgonParams()
+		params.Salt = salt
+		key = KeyFromPassArgon(password, params)
+		kf.Crypto.Kdfparams = params
 	default:
 		return fmt.Errorf("Unsupported KDF scheme: %s", kf.Crypto.Kdf)
 
@@ -114,11 +113,8 @@ func EncryptAES(kf *Keyfile, plaintext []byte, password []byte, niter int) error
 	kf.Version = 3
 	//_, pubkeyec := btcec.PrivKeyFromBytes(btcec.S256(), ethkey)
 	//pubkeyeth := append(pubkeyec.X.Bytes(), pubkeyec.Y.Bytes()...)
-	parambytes, err := json.Marshal(scryptparams)
-	if err != nil {
-		return err
-	}
-	return kf.Crypto.KdfparamsPack.UnmarshalJSON(parambytes)
+
+	return nil
 }
 
 func Decrypt(kf *Keyfile, key []byte) (plaintext []byte, err error) {

@@ -1,6 +1,10 @@
 # kmsclitool
-
 off-line cli tool for digital key management
+
+Manipulatnig in amny ways [Web3 Secret Storage](https://ethereum.org/developers/docs/data-structures-and-encoding/web3-secret-storage) objects.
+This fork is aimed at compatibility with v3 of the standard.
+But...
+It supports Argon.id kdf, because the clock is ticking.
 
 ```
 Yet another tool to manage Ethereum keyfiles, this one written in Go...

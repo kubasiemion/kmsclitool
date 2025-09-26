@@ -15,6 +15,15 @@ type Pbkdf2Params struct {
 	Salt  string `json:"salt"`
 }
 
+type Kdf struct {
+	Name   string `json:"kdf"`
+	Params any    `json:"kdfparams"`
+}
+
+const KdfScrypt = "scrypt"
+const KdfPbkdf2 = "pbkdf2"
+const KdfArgon = "argon"
+
 // function returning stadard scryp parameters as KdfScrytime.Since(start)
 func NewScryptParams(n int) *ScryptParams {
 	if n == 0 {

@@ -1,6 +1,6 @@
 module github.com/proveniencenft/kmsclitool
 
-go 1.17
+go 1.25
 
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.0

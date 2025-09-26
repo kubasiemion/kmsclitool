@@ -76,7 +76,7 @@ func readPolyShare(filename string, shares *[]poly.Share) (enough bool) {
 		fmt.Println(err)
 		return false
 	}
-	if kf.Address == splitAddress {
+	if kf.Address == common.SplitAddress {
 		share := new(poly.Share)
 		err := json.Unmarshal(kf.Plaintext, share)
 		if err != nil {

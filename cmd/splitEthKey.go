@@ -10,8 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const splitAddress = "File contains a shard of a key"
-
 // splitEthKeyCmd
 var splitEthKeyCmd = &cobra.Command{
 	Use:   "splitEthKey --fileptrn filename_pattern -n shares -t theshold -p privkey",
@@ -61,7 +59,7 @@ func splitKey(key []byte, n, t int) ([]*common.Keyfile, error) {
 	}
 	//kf, err := WrapSecret(filename, uuidbase.NthUuidString(i, 1), shenc, splitAddress)
 
-	return common.WrapNSecrets(filenamePat4Key, uuidbase, secrets, encalg, kdf, splitAddress)
+	return common.WrapNSecrets(filenamePat4Key, uuidbase, secrets, encalg, kdf, common.SplitAddress)
 }
 
 var numshares, threshold int

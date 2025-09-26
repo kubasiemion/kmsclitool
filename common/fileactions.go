@@ -80,7 +80,6 @@ func ReadKeyfile(filename string) (*Keyfile, error) {
 		return nil, err
 	}
 	kf.Filename = filename
-	err = kf.UnmarshalKdfJSON()
 	return kf, err
 
 }
@@ -113,7 +112,7 @@ func WriteKeyfile(kf *Keyfile, filename string) error {
 		actualfilename = kf.Filename
 	}
 	if len(actualfilename) == 0 {
-		actualfilename = kf.Address + ".json"
+		actualfilename = kf.ID + ".json"
 
 	}
 	kf.Filename = actualfilename
@@ -193,7 +192,7 @@ func WrapSecret(filename string, id string, plaintext []byte, encalg, kdf, addre
 	}
 
 	keyf.Hint, _ = GetPasswordHint()
-	keyf.Address = addressText
+	//keyf.Address = addressText
 	if err != nil {
 		return nil, err
 	}
